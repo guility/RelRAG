@@ -501,3 +501,15 @@ def chunking_config() -> ChunkingConfig:
         chunk_overlap=20,
         strategy=ChunkingStrategy.RECURSIVE,
     )
+
+
+def pytest_collection_modifyitems(items: list) -> None:
+    """Run e2e tests last so Playwright's event loop does not break sync Falcon tests."""
+    e2e, other = [], []
+    for item in items:
+        if "/e2e/" in item.nodeid or "\\e2e\\" in item.nodeid:
+            e2e.append(item)
+        else:
+            other.append(item)
+    if e2e:
+        items[:] = other + e2e
