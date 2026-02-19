@@ -21,7 +21,7 @@ class AuthMiddleware:
         self._keycloak = keycloak_provider
 
     async def process_request(
-        self, req: falcon.asgi.Request, resp: falcon.asgi.Response, resource, params
+        self, req: falcon.asgi.Request, resp: falcon.asgi.Response
     ) -> None:
         """Extract user from Authorization header."""
         auth = req.get_header("Authorization")

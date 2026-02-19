@@ -1,5 +1,7 @@
 """Application entry point and composition root."""
 
+import sys
+
 import falcon.asgi
 
 from relrag import __version__
@@ -85,6 +87,14 @@ def create_relrag_app():
     app = falcon.asgi.App(
         middleware=[PoolLifespanMiddleware(pool), AuthMiddleware(keycloak)],
     )
+
+    async def log_exception(req, resp, ex, params):
+        import traceback
+        traceback.print_exception(type(ex), ex, ex.__traceback__, file=sys.stderr)
+        resp.status = falcon.HTTP_500
+        resp.media = {"title": "500 Internal Server Error"}
+
+    app.add_error_handler(Exception, log_exception)
     app.add_route("/v1/health", health_resource)
     app.add_route("/v1/health/ready", health_resource, suffix="ready")
     app.add_route("/v1/documents", documents_resource)

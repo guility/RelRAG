@@ -1,0 +1,40 @@
+{
+  "realm": "relrag",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "viewer", "description": "Read-only access" },
+      { "name": "editor", "description": "Read and write access" },
+      { "name": "admin", "description": "Full access including migrate" }
+    ]
+  },
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@relrag.local",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        { "type": "password", "value": "testpass" }
+      ],
+      "realmRoles": ["admin"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "relrag-api",
+      "name": "RelRAG API",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "relrag-api-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:8000/*", "http://relrag-api:8000/*"],
+      "webOrigins": ["http://localhost:8000", "http://relrag-api:8000"]
+    }
+  ]
+}

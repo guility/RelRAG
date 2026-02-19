@@ -2,7 +2,6 @@
 
 from uuid import UUID
 
-from pgvector.psycopg import register_vector  # type: ignore[import-untyped]
 from psycopg import AsyncConnection
 
 from relrag.domain.entities import Chunk
@@ -13,7 +12,6 @@ class PostgresChunkRepository:
 
     def __init__(self, conn: AsyncConnection) -> None:
         self._conn = conn
-        register_vector(conn)
 
     async def create_batch(self, chunks: list[Chunk]) -> list[Chunk]:
         """Create chunks in batch."""

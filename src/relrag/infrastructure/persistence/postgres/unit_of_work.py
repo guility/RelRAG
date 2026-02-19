@@ -3,6 +3,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from pgvector.psycopg import register_vector_async  # type: ignore[import-untyped]
 from psycopg_pool import AsyncConnectionPool
 
 from relrag.infrastructure.persistence.postgres.chunk_repository import (
@@ -42,6 +43,7 @@ class PostgresUnitOfWork:
     async def __aenter__(self) -> "PostgresUnitOfWork":
         self._conn_cm = self._pool.connection()
         self._conn = await self._conn_cm.__aenter__()
+        await register_vector_async(self._conn)
         self._documents = PostgresDocumentRepository(self._conn)
         self._packs = PostgresPackRepository(self._conn)
         self._chunks = PostgresChunkRepository(self._conn)

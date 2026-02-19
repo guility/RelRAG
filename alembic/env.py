@@ -11,9 +11,12 @@ from relrag.config import get_settings
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override sqlalchemy.url from settings
+# Override sqlalchemy.url from settings (use psycopg driver for psycopg3)
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+db_url = settings.database_url
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:

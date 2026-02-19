@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     embedding_api_url: str = Field(
         default="https://api.openai.com/v1",
         description="OpenAI-compatible embedding API URL",
+        validation_alias=AliasChoices("EMBEDDING_API_URL", "OPENAI_BASE"),
     )
     embedding_api_key: str = Field(default="", description="Embedding API key")
     embedding_model: str = Field(

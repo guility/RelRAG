@@ -1,14 +1,24 @@
-# Multi-stage build for RelRAG API
-FROM python:3.12-slim
+# RelRAG API - uv + Python 3.14
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
 
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
+ENV UV_NO_DEV=1
+ENV UV_LINK_MODE=copy
+
+# Install dependencies first (better layer caching)
+COPY pyproject.toml uv.lock README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-install-project --no-editable
+
+# Copy project and install
 COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
-RUN pip install --no-cache-dir -e .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-editable
 
+ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app/src
 EXPOSE 8000
 

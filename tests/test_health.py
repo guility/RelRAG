@@ -22,3 +22,10 @@ def test_health_liveness(client: TestClient) -> None:
     result = client.simulate_get("/v1/health")
     assert result.status_code == 200
     assert result.json["status"] == "ok"
+
+
+def test_health_ready(client: TestClient) -> None:
+    """GET /v1/health/ready returns 200."""
+    result = client.simulate_get("/v1/health/ready")
+    assert result.status_code == 200
+    assert result.json["status"] == "ready"
