@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+Decompose tasks in unitary (minimal) parts. Perform parts consequently.
+Validate tests and consistency of code after every part.
+Don't proceed before definition of done is achieved.
+After definition of done was achieved use `intermediate-git-commit` skill to commit changes.

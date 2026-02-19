@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Follow clean architecture, SOLID, KISS, YAGNI and DRY princibles, specifically in that order.

@@ -8,20 +8,26 @@ from relrag.application.dto.document_dto import DocumentCreateInput, DocumentOut
 from relrag.application.use_cases.document.get_document import GetDocumentUseCase
 from relrag.application.use_cases.document.load_document import LoadDocumentUseCase
 from relrag.domain.exceptions import NotFound, PermissionDenied, ValidationError
+from relrag.infrastructure.document_parsers import parse_file
 
 
 class DocumentsResource:
-    """POST /v1/documents - create document."""
+    """POST /v1/documents - create document (JSON or multipart with files)."""
 
     def __init__(self, load_document: LoadDocumentUseCase) -> None:
         self._load_document = load_document
 
     async def on_post(self, req: falcon.asgi.Request, resp: falcon.asgi.Response) -> None:
-        """Create document in collection."""
+        """Create document(s) in collection. JSON: one doc; multipart: one doc per file."""
         user = getattr(req.context, "user", None)
         if not user:
             resp.status = falcon.HTTP_401
             resp.media = {"error": "Unauthorized"}
+            return
+
+        content_type = req.content_type or ""
+        if "multipart/form-data" in content_type:
+            await self._handle_multipart(req, resp, user.user_id)
             return
 
         try:
@@ -51,6 +57,67 @@ class DocumentsResource:
         except ValidationError as e:
             resp.status = falcon.HTTP_400
             resp.media = {"error": str(e)}
+
+    async def _handle_multipart(
+        self, req: falcon.asgi.Request, resp: falcon.asgi.Response, user_id: str
+    ) -> None:
+        """Handle multipart form: collection_id + multiple files."""
+        try:
+            form = await req.get_media()
+        except Exception as e:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": f"Invalid multipart: {e}"}
+            return
+        collection_id_str: str | None = None
+        files: list[tuple[bytes, str]] = []
+        async for part in form:
+            name = part.name or ""
+            if name == "collection_id":
+                data = await part.get_data()
+                collection_id_str = data.decode("utf-8").strip()
+            elif name in ("files", "files[]") and part.filename:
+                data = await part.get_data()
+                filename = part.secure_filename or part.filename or "file"
+                files.append((bytes(data), filename))
+        if not collection_id_str:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "collection_id required"}
+            return
+        if not files:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "At least one file required"}
+            return
+        try:
+            collection_id = UUID(collection_id_str)
+        except ValueError:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "Invalid collection_id"}
+            return
+        created: list[dict] = []
+        errors: list[dict] = []
+        for data, filename in files:
+            try:
+                parsed = parse_file(data, filename=filename, content_type=None)
+                props = {k: (v[0], v[1].value) for k, v in parsed.properties.items()}
+                out = await self._load_document.execute(
+                    user_id,
+                    DocumentCreateInput(
+                        collection_id=collection_id,
+                        content=parsed.text or " ",
+                        properties=props,
+                    ),
+                )
+                created.append(_document_to_dict(out))
+            except ValueError as e:
+                errors.append({"filename": filename, "error": str(e)})
+            except PermissionDenied:
+                resp.status = falcon.HTTP_403
+                resp.media = {"error": "Permission denied"}
+                return
+            except ValidationError as e:
+                errors.append({"filename": filename, "error": str(e)})
+        resp.media = {"documents": created, "errors": errors}
+        resp.status = falcon.HTTP_201
 
 
 class DocumentResource:

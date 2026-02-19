@@ -26,12 +26,13 @@
   <main>
     <h2>Загрузить документ</h2>
     <div class="hint">
-      <strong>Загрузка текста</strong>
-      <p>Выберите коллекцию и вставьте текст. Документ будет разбит на чанки, преобразован в эмбеддинги и сохранён для семантического поиска.</p>
+      <strong>Загрузка текста или файлов</strong>
+      <p>Выберите коллекцию и либо вставьте текст, либо приложите файлы (txt, md, csv, tsv, docx, pdf, xlsx, pptx, epub). Метаданные из файлов сохраняются в свойства документа.</p>
     </div>
     <form id="formDoc">
       <label>Коллекция <select id="collId" required></select></label>
-      <label>Текст <textarea id="docContent" rows="10" required></textarea></label>
+      <label>Файлы <input type="file" id="fileInput" name="files" multiple accept=".txt,.md,.csv,.tsv,.docx,.pdf,.xlsx,.pptx,.epub"></label>
+      <label>Или текст <textarea id="docContent" rows="10" placeholder="вставьте текст или выберите файлы выше"></textarea></label>
       <button type="submit">Загрузить</button>
     </form>
     <div id="msg"></div>
@@ -66,8 +67,43 @@
       document.getElementById("formDoc").onsubmit = function (e) {
         e.preventDefault();
         const collId = document.getElementById("collId").value;
-        const content = document.getElementById("docContent").value;
-        if (!collId || !content) return;
+        const fileInput = document.getElementById("fileInput");
+        const content = document.getElementById("docContent").value.trim();
+        const files = fileInput && fileInput.files ? fileInput.files : [];
+        if (!collId) return;
+        if (files.length > 0) {
+          const formData = new FormData();
+          formData.append("collection_id", collId);
+          for (var i = 0; i < files.length; i++) {
+            formData.append("files", files[i], files[i].name);
+          }
+          const cfg = window.RELRAG_CONFIG || {};
+          const API_URL = (cfg.API_URL || "").replace(/\/$/, "");
+          const token = auth.getToken();
+          const headers = {};
+          if (token) headers["Authorization"] = "Bearer " + token;
+          fetch(API_URL + "/v1/documents", {
+            method: "POST",
+            headers: headers,
+            body: formData,
+            credentials: "omit",
+          }).then(function (res) { return api.handleResponse(res); }).then(function (data) {
+            const el = document.getElementById("msg");
+            if (data && data.documents && data.documents.length > 0) {
+              var errStr = data.errors && data.errors.length ? " Ошибки: " + data.errors.length : "";
+              el.innerHTML = "<p class='success'>Загружено документов: " + data.documents.length + errStr + "</p>";
+              fileInput.value = "";
+            } else if (data && data.errors && data.errors.length > 0) {
+              el.innerHTML = "<p class='error'>Ошибки загрузки: " + data.errors.map(function (x) { return x.filename + " — " + x.error; }).join("; ") + "</p>";
+            } else {
+              el.innerHTML = "<p class='error'>Не удалось загрузить</p>";
+            }
+          }).catch(function () {
+            document.getElementById("msg").innerHTML = "<p class='error'>Ошибка загрузки</p>";
+          });
+          return;
+        }
+        if (!content) return;
         api.post("/v1/documents", { collection_id: collId, content: content, properties: {} })
           .then(function (res) { return api.handleResponse(res); })
           .then(function (data) {

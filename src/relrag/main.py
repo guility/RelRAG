@@ -34,6 +34,7 @@ from relrag.interfaces.api.resources.permissions import (
     PermissionRevokeResource,
     PermissionsResource,
 )
+from relrag.interfaces.api.resources.property_schema import PropertySchemaResource
 from relrag.interfaces.api.resources.search import SearchResource
 
 
@@ -112,6 +113,7 @@ def create_relrag_app():
     configurations_resource = ConfigurationsResource(uow_factory)
     models_resource = ModelsResource()
     search_resource = SearchResource(hybrid_search)
+    property_schema_resource = PropertySchemaResource(uow_factory, permission_checker)
     health_resource = HealthResource()
 
     cors_origins = [
@@ -147,6 +149,10 @@ def create_relrag_app():
     )
     app.add_route("/v1/configurations", configurations_resource)
     app.add_route("/v1/collections/{collection_id}/search", search_resource)
+    app.add_route(
+        "/v1/collections/{collection_id}/property-schema",
+        property_schema_resource,
+    )
 
     return app
 

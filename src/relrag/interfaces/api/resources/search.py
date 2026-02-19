@@ -36,6 +36,7 @@ class SearchResource:
             vector_weight = body.get("vector_weight", 0.7)
             fts_weight = body.get("fts_weight", 0.3)
             limit = body.get("limit", 10)
+            filters = body.get("filters")
         except Exception:
             resp.status = falcon.HTTP_400
             resp.media = {"error": "Invalid request body"}
@@ -57,6 +58,7 @@ class SearchResource:
                     vector_weight=vector_weight,
                     fts_weight=fts_weight,
                     limit=limit,
+                    filters=filters if isinstance(filters, dict) else None,
                 ),
             )
             resp.media = {

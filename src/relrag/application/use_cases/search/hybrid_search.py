@@ -1,6 +1,7 @@
 """Hybrid search use case - vector + full-text."""
 
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from relrag.application.ports import EmbeddingProvider, PermissionChecker
@@ -27,6 +28,7 @@ class HybridSearchInput:
     vector_weight: float = 0.7
     fts_weight: float = 0.3
     limit: int = 10
+    filters: dict[str, Any] | None = None  # key -> { gte?, lte?, one_of?, eq? }
 
 
 class HybridSearchUseCase:
@@ -63,6 +65,7 @@ class HybridSearchUseCase:
                 vector_weight=input_data.vector_weight,
                 fts_weight=input_data.fts_weight,
                 limit=input_data.limit,
+                property_filters=input_data.filters,
             )
             return [
                 HybridSearchResult(

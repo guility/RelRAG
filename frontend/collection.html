@@ -33,7 +33,8 @@
     </div>
     <form id="formSearch">
       <label>Запрос <input type="text" id="searchQuery" placeholder="текст для поиска" required></label>
-      <button type="submit">Искать</button>
+      <div id="searchFilters" class="card" style="margin-top:1rem;display:none;"></div>
+      <button type="submit" style="margin-top:1rem">Искать</button>
     </form>
     <div id="searchResults"></div>
     <h3>Загрузить документ</h3>
@@ -81,10 +82,91 @@
 
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
 
+      var propertySchema = [];
+      function loadPropertySchema() {
+        return api.get("/v1/collections/" + collId + "/property-schema").then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          propertySchema = (data && data.properties) ? data.properties : [];
+          var container = document.getElementById("searchFilters");
+          if (propertySchema.length === 0) {
+            container.style.display = "none";
+            container.innerHTML = "";
+            return;
+          }
+          container.style.display = "block";
+          container.innerHTML = "<strong>Фильтры по свойствам</strong>";
+          propertySchema.forEach(function (prop, idx) {
+            var block = document.createElement("div");
+            block.style.marginTop = "0.5rem";
+            block.setAttribute("data-key", prop.key);
+            block.setAttribute("data-type", prop.type);
+            if (prop.type === "string" && prop.values && prop.values.length > 0) {
+              block.innerHTML = "<label style='display:block'>" + prop.key + " (мультивыбор)</label>" +
+                "<input type='text' class='filter-search' placeholder='Поиск...' style='width:100%;max-width:300px;margin-bottom:4px'>" +
+                "<div class='filter-values' style='max-height:120px;overflow-y:auto'>" +
+                (prop.values.map(function (v) {
+                  return "<label style='display:block'><input type='checkbox' class='filter-one-of' value=\"" + String(v).replace(/"/g, "&quot;") + "\"> " + String(v) + "</label>";
+                }).join("")) + "</div>";
+            } else if (prop.type === "bool") {
+              block.innerHTML = "<label style='display:block'><input type='checkbox' class='filter-bool'> " + prop.key + " (да)</label>";
+            } else if (prop.type === "int" || prop.type === "float" || prop.type === "date") {
+              var inputType = prop.type === "date" ? "date" : "number";
+              block.innerHTML = "<label style='display:block'>" + prop.key + "</label>" +
+                "<span>От <input type='" + inputType + "' class='filter-gte' style='width:120px'></span> " +
+                "<span>До <input type='" + inputType + "' class='filter-lte' style='width:120px'></span>";
+            } else {
+              block.innerHTML = "<label style='display:block'>" + prop.key + " (тип: " + prop.type + ")</label>";
+            }
+            container.appendChild(block);
+          });
+          container.querySelectorAll(".filter-search").forEach(function (searchInput) {
+            searchInput.oninput = function () {
+              var q = (searchInput.value || "").toLowerCase();
+              var div = searchInput.nextElementSibling;
+              div.querySelectorAll("label").forEach(function (l) {
+                var text = (l.textContent || "").toLowerCase();
+                l.style.display = text.indexOf(q) >= 0 ? "block" : "none";
+              });
+            };
+          });
+        }).catch(function () {});
+      }
+
+      function gatherFilters() {
+        var filters = {};
+        document.getElementById("searchFilters").querySelectorAll("[data-key]").forEach(function (block) {
+          var key = block.getAttribute("data-key");
+          var type = block.getAttribute("data-type");
+          if (type === "string") {
+            var checked = [];
+            block.querySelectorAll(".filter-one-of:checked").forEach(function (cb) { checked.push(cb.value); });
+            if (checked.length) filters[key] = { one_of: checked };
+          } else if (type === "bool") {
+            var cb = block.querySelector(".filter-bool");
+            if (cb && cb.checked) filters[key] = true;
+          } else if (type === "int" || type === "float" || type === "date") {
+            var gte = block.querySelector(".filter-gte");
+            var lte = block.querySelector(".filter-lte");
+            var v1 = gte && gte.value ? (type === "int" || type === "float" ? parseFloat(gte.value) : gte.value) : null;
+            var v2 = lte && lte.value ? (type === "int" || type === "float" ? parseFloat(lte.value) : lte.value) : null;
+            if (v1 != null || v2 != null) {
+              filters[key] = {};
+              if (v1 != null) filters[key].gte = v1;
+              if (v2 != null) filters[key].lte = v2;
+            }
+          }
+        });
+        return Object.keys(filters).length ? filters : undefined;
+      }
+
       document.getElementById("formSearch").onsubmit = function (e) {
         e.preventDefault();
         const query = document.getElementById("searchQuery").value;
-        api.post("/v1/collections/" + collId + "/search", { query: query, limit: 10 })
+        var body = { query: query, limit: 10 };
+        var filters = gatherFilters();
+        if (filters) body.filters = filters;
+        api.post("/v1/collections/" + collId + "/search", body)
           .then(function (res) { return api.handleResponse(res); })
           .then(function (data) {
             const el = document.getElementById("searchResults");
@@ -117,7 +199,7 @@
 
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();
-        else auth.updateToken(30).then(loadInfo).catch(function () { auth.login(); });
+        else auth.updateToken(30).then(loadInfo).then(loadPropertySchema).catch(function () { auth.login(); });
       }).catch(function () { auth.login(); });
     })();
   </script>

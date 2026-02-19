@@ -23,5 +23,5 @@ class ChunkRepository(Protocol):
         vector_weight: float = 0.7,
         fts_weight: float = 0.3,
         limit: int = 10,
-        property_filters: dict[str, str] | None = None,
+        property_filters: dict[str, object] | None = None,
     ) -> list[dict[str, object]]: ...
