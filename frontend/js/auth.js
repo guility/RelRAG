@@ -49,8 +49,9 @@
 
     updateToken: function () {
       return keycloak
-        ? keycloak.updateToken(30).catch(function () {
+        ? keycloak.updateToken(30).catch(function (err) {
             keycloak.login();
+            return Promise.reject(err);
           })
         : Promise.reject(new Error("Not initialized"));
     },

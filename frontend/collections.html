@@ -51,7 +51,7 @@
       const auth = window.relragAuth;
 
       function loadConfigs() {
-        api.get("/v1/configurations").then(function (res) {
+        return api.get("/v1/configurations").then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           const sel = document.getElementById("configId");
@@ -69,7 +69,7 @@
       }
 
       function loadList() {
-        api.get("/v1/collections").then(function (res) {
+        return api.get("/v1/collections").then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           const el = document.getElementById("list");
@@ -101,8 +101,7 @@
       };
 
       function runWhenReady() {
-        loadConfigs();
-        loadList();
+        return Promise.all([loadConfigs(), loadList()]);
       }
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();

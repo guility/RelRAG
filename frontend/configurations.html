@@ -69,7 +69,7 @@
       }
 
       function loadList() {
-        api.get("/v1/configurations").then(function (res) {
+        return api.get("/v1/configurations").then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           const el = document.getElementById("list");

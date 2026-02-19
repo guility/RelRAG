@@ -1,13 +1,22 @@
-"""CORS middleware: add headers to all responses and handle OPTIONS preflight."""
+"""CORS middleware: add headers from configured origins and handle OPTIONS preflight."""
 
 import falcon.asgi
 
 
 class CORSMiddleware:
-    """Add CORS headers to every response and respond to OPTIONS with 200."""
+    """Add CORS headers using configured origins; respond to OPTIONS with 200."""
 
-    def _set_headers(self, resp: falcon.asgi.Response) -> None:
-        resp.set_header("Access-Control-Allow-Origin", "*")
+    def __init__(self, origins: list[str]) -> None:
+        self._origins = origins
+
+    def _set_headers(
+        self, req: falcon.asgi.Request, resp: falcon.asgi.Response
+    ) -> None:
+        origin = req.get_header("Origin")
+        if origin and origin in self._origins:
+            resp.set_header("Access-Control-Allow-Origin", origin)
+        elif self._origins:
+            resp.set_header("Access-Control-Allow-Origin", self._origins[0])
         resp.set_header(
             "Access-Control-Allow-Methods",
             "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -21,7 +30,7 @@ class CORSMiddleware:
     async def process_request(
         self, req: falcon.asgi.Request, resp: falcon.asgi.Response
     ) -> None:
-        self._set_headers(resp)
+        self._set_headers(req, resp)
         if req.method == "OPTIONS":
             resp.status = falcon.HTTP_200
             resp.media = {}
@@ -34,4 +43,4 @@ class CORSMiddleware:
         resource: object,
         req_succeeded: bool,
     ) -> None:
-        self._set_headers(resp)
+        self._set_headers(req, resp)

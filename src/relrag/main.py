@@ -114,9 +114,12 @@ def create_relrag_app():
     search_resource = SearchResource(hybrid_search)
     health_resource = HealthResource()
 
+    cors_origins = [
+        o.strip() for o in settings.cors_origins.split(",") if o.strip()
+    ]
     app = falcon.asgi.App(
         middleware=[
-            CORSMiddleware(),
+            CORSMiddleware(cors_origins),
             PoolLifespanMiddleware(pool),
             AuthMiddleware(keycloak),
         ],

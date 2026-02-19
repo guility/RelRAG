@@ -48,7 +48,7 @@
       const auth = window.relragAuth;
 
       function loadCollections() {
-        api.get("/v1/collections").then(function (res) {
+        return api.get("/v1/collections").then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           const sel = document.getElementById("collId");

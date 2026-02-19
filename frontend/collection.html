@@ -65,7 +65,7 @@
       document.getElementById("adminLink").href = "admin.html?collection=" + collId;
 
       function loadInfo() {
-        api.get("/v1/collections/" + collId).then(function (res) {
+        return api.get("/v1/collections/" + collId).then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           const el = document.getElementById("info");

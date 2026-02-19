@@ -79,7 +79,7 @@
       }
 
       function loadCollections() {
-        api.get("/v1/collections").then(function (r) { return api.handleResponse(r); }).then(function (d) {
+        return api.get("/v1/collections").then(function (r) { return api.handleResponse(r); }).then(function (d) {
           if (d && d.items) {
             fillSelect("migrateColl", d.items, "id", "id");
             fillSelect("permColl", d.items, "id", "id");
@@ -93,7 +93,7 @@
       }
 
       function loadConfigs() {
-        api.get("/v1/configurations").then(function (r) { return api.handleResponse(r); }).then(function (d) {
+        return api.get("/v1/configurations").then(function (r) { return api.handleResponse(r); }).then(function (d) {
           if (d && d.items) fillSelect("migrateConfig", d.items, "id", "id");
         }).catch(function () {});
       }
@@ -159,8 +159,7 @@
       if (collId) document.getElementById("collInfo").textContent = "Коллекция: " + collId;
 
       function runWhenReady() {
-        loadCollections();
-        loadConfigs();
+        return Promise.all([loadCollections(), loadConfigs()]);
       }
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();
