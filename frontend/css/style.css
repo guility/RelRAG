@@ -332,3 +332,140 @@ a:hover {
 .gap-1 {
   gap: 1rem;
 }
+
+/* Filter block: ensure labels and headings are visible in light and dark theme */
+#searchFilters,
+.search-filters-card {
+  color: var(--md-sys-color-on-surface);
+}
+
+#searchFilters strong,
+.search-filters-card strong,
+#searchFilters .filter-block-label,
+.filter-block label,
+#searchFilters label {
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
+}
+
+#searchFilters .filter-block,
+.filter-block {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+#searchFilters .filter-block:last-child {
+  border-bottom: none;
+}
+
+/* Filter dropdown (add-filter) */
+.filter-add-dropdown {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.filter-add-dropdown .filter-add-input {
+  width: 100%;
+  max-width: 280px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-radius-sm);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.875rem;
+}
+
+.filter-add-dropdown .filter-add-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 260px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--md-sys-color-surface-variant);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-radius-sm);
+  box-shadow: var(--md-elevation-2);
+  padding: 0.5rem;
+  margin-top: 2px;
+}
+
+.filter-add-dropdown .filter-add-panel label {
+  display: block;
+  margin: 0.25rem 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--md-radius-sm);
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface);
+}
+
+.filter-add-dropdown .filter-add-panel label:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .filter-add-dropdown .filter-add-panel label:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.filter-add-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem 0.25rem 0 0;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-radius-sm);
+  font-size: 0.8rem;
+}
+
+.filter-add-chip .filter-remove-btn {
+  background: none;
+  border: none;
+  padding: 0 0.2rem;
+  cursor: pointer;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.filter-add-chip .filter-remove-btn:hover {
+  opacity: 0.8;
+}
+
+/* Search result items: document title, metadata, scores, content */
+.search-results .search-result-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-radius-sm);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.search-results .result-doc {
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  margin-bottom: 0.25rem;
+}
+
+.search-results .result-meta {
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 0.35rem;
+}
+
+.search-results .result-scores {
+  font-size: 0.85rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 0.35rem;
+}
+
+.search-results .result-content {
+  font-size: 0.9rem;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.4;
+}

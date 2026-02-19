@@ -379,8 +379,12 @@ def _hybrid_search_uow_factory(collection_id=None, search_results=None):
         {
             "chunk_id": uuid4(),
             "pack_id": uuid4(),
+            "document_id": uuid4(),
             "content": "relevant chunk",
+            "vector_score": 0.9,
+            "fts_score": 0.5,
             "score": 0.95,
+            "doc_props": None,
         }
     ]
 
@@ -425,13 +429,18 @@ async def test_hybrid_search_success(
     """HybridSearchUseCase returns search results."""
     chunk_id = uuid4()
     pack_id = uuid4()
+    doc_id = uuid4()
     factory, coll_id = _hybrid_search_uow_factory(
         search_results=[
             {
                 "chunk_id": chunk_id,
                 "pack_id": pack_id,
+                "document_id": doc_id,
                 "content": "found content",
+                "vector_score": 0.8,
+                "fts_score": 0.4,
                 "score": 0.88,
+                "doc_props": {"title": "Test Doc", "author": "Tester"},
             }
         ]
     )
@@ -450,8 +459,13 @@ async def test_hybrid_search_success(
     assert len(results) == 1
     assert results[0].chunk_id == chunk_id
     assert results[0].pack_id == pack_id
+    assert results[0].document_id == doc_id
     assert results[0].content == "found content"
+    assert results[0].vector_score == 0.8
+    assert results[0].fts_score == 0.4
     assert results[0].score == 0.88
+    assert results[0].document_title == "Test Doc"
+    assert results[0].metadata == {"author": "Tester"}
 
 
 # --- MigrateCollectionUseCase ---

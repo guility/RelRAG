@@ -24,7 +24,7 @@
   </header>
 
   <main>
-    <h2>Коллекция <span id="collId"></span></h2>
+    <h2><span id="collTitle">Коллекция</span></h2>
     <div id="info"></div>
     <h3>Поиск</h3>
     <div class="hint">
@@ -33,6 +33,11 @@
     </div>
     <form id="formSearch">
       <label>Запрос <input type="text" id="searchQuery" placeholder="текст для поиска" required></label>
+      <div class="search-options" style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:0.5rem">
+        <label>Доля семантического (0–1) <input type="number" id="searchVectorWeight" min="0" max="1" step="0.1" value="0.7" style="width:4rem"></label>
+        <label>Доля полнотекстового (0–1) <input type="number" id="searchFtsWeight" min="0" max="1" step="0.1" value="0.3" style="width:4rem"></label>
+        <label>Макс. результатов <input type="number" id="searchLimit" min="1" max="100" value="10" style="width:4rem"></label>
+      </div>
       <div id="searchFilters" class="card" style="margin-top:1rem;display:none;"></div>
       <button type="submit" style="margin-top:1rem">Искать</button>
     </form>
@@ -54,6 +59,7 @@
     (function () {
       const api = window.relragApi;
       const auth = window.relragAuth;
+      function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
       const params = new URLSearchParams(window.location.search);
       const collId = params.get("id");
 
@@ -62,7 +68,7 @@
         throw new Error("No collection id");
       }
 
-      document.getElementById("collId").textContent = collId;
+      document.getElementById("collTitle").textContent = "Коллекция " + collId;
       document.getElementById("adminLink").href = "admin.html?collection=" + collId;
 
       function loadInfo() {
@@ -71,7 +77,9 @@
         }).then(function (data) {
           const el = document.getElementById("info");
           if (data && data.id) {
-            el.innerHTML = "<div class='card'><p>Конфигурация: " + data.configuration_id + "</p></div>";
+            var collName = (data.name && data.name.trim()) ? data.name : data.id;
+            document.getElementById("collTitle").textContent = collName;
+            el.innerHTML = "<div class='card'><p>Конфигурация: " + escapeHtml(data.configuration_id) + "</p></div>";
           } else {
             el.innerHTML = "<p class='error'>Не удалось загрузить</p>";
           }
@@ -83,6 +91,113 @@
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
 
       var propertySchema = [];
+      var activeFilterKeys = [];
+      function getPropLabel(prop) { return (prop.label && prop.label.trim()) ? prop.label : prop.key; }
+      function renderFilterBlocks() {
+        var wrap = document.getElementById("searchFilterBlocks");
+        if (!wrap) return;
+        wrap.innerHTML = "";
+        activeFilterKeys.forEach(function (key) {
+          var prop = propertySchema.find(function (p) { return p.key === key; });
+          if (!prop) return;
+          var block = document.createElement("div");
+          block.className = "filter-block";
+          block.setAttribute("data-key", prop.key);
+          block.setAttribute("data-type", prop.type);
+          var label = getPropLabel(prop);
+          if (prop.type === "string" && prop.values && prop.values.length > 0) {
+            block.innerHTML = "<span class='filter-block-label'>" + escapeHtml(label) + " (мультивыбор)</span> " +
+              "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>" +
+              "<input type='text' class='filter-search' placeholder='Поиск...' style='width:100%;max-width:300px;margin:4px 0'>" +
+              "<div class='filter-values' style='max-height:100px;overflow-y:auto'>" +
+              (prop.values.map(function (v) {
+                return "<label style='display:block'><input type='checkbox' class='filter-one-of' value=\"" + String(v).replace(/"/g, "&quot;") + "\"> " + escapeHtml(String(v)) + "</label>";
+              }).join("")) + "</div>";
+          } else if (prop.type === "bool") {
+            block.innerHTML = "<label style='display:inline'><input type='checkbox' class='filter-bool'> " + escapeHtml(label) + " (да)</label> " +
+              "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>";
+          } else if (prop.type === "int" || prop.type === "float" || prop.type === "date") {
+            var inputType = prop.type === "date" ? "date" : "number";
+            block.innerHTML = "<span class='filter-block-label'>" + escapeHtml(label) + "</span> " +
+              "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>" +
+              "<span>От <input type='" + inputType + "' class='filter-gte' style='width:120px'></span> " +
+              "<span>До <input type='" + inputType + "' class='filter-lte' style='width:120px'></span>";
+          } else {
+            block.innerHTML = "<span class='filter-block-label'>" + escapeHtml(label) + " (тип: " + prop.type + ")</span> " +
+              "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>";
+          }
+          wrap.appendChild(block);
+        });
+        wrap.querySelectorAll(".filter-remove-btn").forEach(function (btn) {
+          btn.onclick = function () {
+            var k = btn.getAttribute("data-key");
+            activeFilterKeys = activeFilterKeys.filter(function (x) { return x !== k; });
+            renderFilterBlocks();
+          };
+        });
+        wrap.querySelectorAll(".filter-search").forEach(function (searchInput) {
+          searchInput.oninput = function () {
+            var q = (searchInput.value || "").toLowerCase();
+            var div = searchInput.nextElementSibling;
+            if (!div) return;
+            div.querySelectorAll("label").forEach(function (l) {
+              var text = (l.textContent || "").toLowerCase();
+              l.style.display = text.indexOf(q) >= 0 ? "block" : "none";
+            });
+          };
+        });
+      }
+      function buildFilterDropdown() {
+        var container = document.getElementById("searchFilters");
+        var wrap = document.createElement("div");
+        wrap.className = "search-filters-card card";
+        wrap.innerHTML = "<strong>Фильтры по свойствам</strong>" +
+          "<div class='filter-add-dropdown'>" +
+          "<button type='button' class='btn outlined' id='btnAddFilter'>Добавить фильтр</button>" +
+          "<div class='filter-add-panel' id='filterAddPanel' style='display:none'>" +
+          "<input type='text' class='filter-add-input' id='filterAddSearch' placeholder='Поиск свойств...'>" +
+          "<div id='filterAddList'></div>" +
+          "</div>" +
+          "</div>" +
+          "<div id='searchFilterBlocks'></div>";
+        container.innerHTML = "";
+        container.appendChild(wrap);
+        container.style.display = "block";
+        var panel = document.getElementById("filterAddPanel");
+        var listEl = document.getElementById("filterAddList");
+        var searchInput = document.getElementById("filterAddSearch");
+        document.getElementById("btnAddFilter").onclick = function (e) {
+          e.preventDefault();
+          panel.style.display = panel.style.display === "none" ? "block" : "none";
+          if (panel.style.display === "block") { searchInput.value = ""; filterAddListFilter(""); }
+        };
+        function filterAddListFilter(q) {
+          q = (q || "").toLowerCase();
+          listEl.innerHTML = propertySchema.filter(function (p) {
+            return activeFilterKeys.indexOf(p.key) === -1 && (q === "" || getPropLabel(p).toLowerCase().indexOf(q) >= 0 || p.key.toLowerCase().indexOf(q) >= 0);
+          }).map(function (p) {
+            return "<label><input type='checkbox' class='filter-add-one' value='" + escapeHtml(p.key) + "'> " + escapeHtml(getPropLabel(p)) + "</label>";
+          }).join("");
+          listEl.querySelectorAll(".filter-add-one").forEach(function (cb) {
+            cb.onchange = function () {
+              if (cb.checked) {
+                activeFilterKeys.push(cb.value);
+                renderFilterBlocks();
+                cb.checked = false;
+                panel.style.display = "none";
+              }
+            };
+          });
+        }
+        searchInput.oninput = function () { filterAddListFilter(searchInput.value); };
+        searchInput.onfocus = function () { if (panel.style.display === "none") panel.style.display = "block"; };
+        filterAddListFilter("");
+        document.addEventListener("click", function (e) {
+          if (panel && panel.style.display === "block" && !panel.contains(e.target) && e.target.id !== "btnAddFilter") {
+            panel.style.display = "none";
+          }
+        });
+      }
       function loadPropertySchema() {
         return api.get("/v1/collections/" + collId + "/property-schema").then(function (res) {
           return api.handleResponse(res);
@@ -92,50 +207,20 @@
           if (propertySchema.length === 0) {
             container.style.display = "none";
             container.innerHTML = "";
+            activeFilterKeys = [];
             return;
           }
-          container.style.display = "block";
-          container.innerHTML = "<strong>Фильтры по свойствам</strong>";
-          propertySchema.forEach(function (prop, idx) {
-            var block = document.createElement("div");
-            block.style.marginTop = "0.5rem";
-            block.setAttribute("data-key", prop.key);
-            block.setAttribute("data-type", prop.type);
-            if (prop.type === "string" && prop.values && prop.values.length > 0) {
-              block.innerHTML = "<label style='display:block'>" + prop.key + " (мультивыбор)</label>" +
-                "<input type='text' class='filter-search' placeholder='Поиск...' style='width:100%;max-width:300px;margin-bottom:4px'>" +
-                "<div class='filter-values' style='max-height:120px;overflow-y:auto'>" +
-                (prop.values.map(function (v) {
-                  return "<label style='display:block'><input type='checkbox' class='filter-one-of' value=\"" + String(v).replace(/"/g, "&quot;") + "\"> " + String(v) + "</label>";
-                }).join("")) + "</div>";
-            } else if (prop.type === "bool") {
-              block.innerHTML = "<label style='display:block'><input type='checkbox' class='filter-bool'> " + prop.key + " (да)</label>";
-            } else if (prop.type === "int" || prop.type === "float" || prop.type === "date") {
-              var inputType = prop.type === "date" ? "date" : "number";
-              block.innerHTML = "<label style='display:block'>" + prop.key + "</label>" +
-                "<span>От <input type='" + inputType + "' class='filter-gte' style='width:120px'></span> " +
-                "<span>До <input type='" + inputType + "' class='filter-lte' style='width:120px'></span>";
-            } else {
-              block.innerHTML = "<label style='display:block'>" + prop.key + " (тип: " + prop.type + ")</label>";
-            }
-            container.appendChild(block);
-          });
-          container.querySelectorAll(".filter-search").forEach(function (searchInput) {
-            searchInput.oninput = function () {
-              var q = (searchInput.value || "").toLowerCase();
-              var div = searchInput.nextElementSibling;
-              div.querySelectorAll("label").forEach(function (l) {
-                var text = (l.textContent || "").toLowerCase();
-                l.style.display = text.indexOf(q) >= 0 ? "block" : "none";
-              });
-            };
-          });
+          activeFilterKeys = [];
+          buildFilterDropdown();
+          renderFilterBlocks();
         }).catch(function () {});
       }
 
       function gatherFilters() {
         var filters = {};
-        document.getElementById("searchFilters").querySelectorAll("[data-key]").forEach(function (block) {
+        var container = document.getElementById("searchFilterBlocks");
+        if (!container) return undefined;
+        container.querySelectorAll("[data-key]").forEach(function (block) {
           var key = block.getAttribute("data-key");
           var type = block.getAttribute("data-type");
           if (type === "string") {
@@ -163,7 +248,12 @@
       document.getElementById("formSearch").onsubmit = function (e) {
         e.preventDefault();
         const query = document.getElementById("searchQuery").value;
-        var body = { query: query, limit: 10 };
+        var body = {
+          query: query,
+          vector_weight: parseFloat(document.getElementById("searchVectorWeight").value) || 0.7,
+          fts_weight: parseFloat(document.getElementById("searchFtsWeight").value) || 0.3,
+          limit: parseInt(document.getElementById("searchLimit").value, 10) || 10
+        };
         var filters = gatherFilters();
         if (filters) body.filters = filters;
         api.post("/v1/collections/" + collId + "/search", body)
@@ -172,7 +262,21 @@
             const el = document.getElementById("searchResults");
             if (data && data.results && data.results.length > 0) {
               el.innerHTML = "<ul class='search-results'>" + data.results.map(function (r) {
-                return "<li>" + (r.content || "").substring(0, 200) + " <small>(score: " + r.score + ")</small></li>";
+                var title = (r.document_title && r.document_title.trim()) ? r.document_title : "Без названия";
+                var meta = r.metadata || {};
+                var metaParts = [];
+                if (meta.author) metaParts.push("Автор: " + escapeHtml(String(meta.author)));
+                if (meta.created_date) metaParts.push("Создан: " + escapeHtml(String(meta.created_date)));
+                if (meta.modified_date) metaParts.push("Изменён: " + escapeHtml(String(meta.modified_date)));
+                if (meta.page_count != null && meta.page_count !== "") metaParts.push("Страниц: " + escapeHtml(String(meta.page_count)));
+                if (meta.file_size_mb != null && meta.file_size_mb !== "") metaParts.push("Размер: " + escapeHtml(String(meta.file_size_mb)) + " МБ");
+                var metaHtml = metaParts.length ? "<div class='result-meta'>" + metaParts.join("; ") + "</div>" : "";
+                return "<li class='search-result-item'>" +
+                  "<div class='result-doc'>" + escapeHtml(title) + "</div>" +
+                  metaHtml +
+                  "<div class='result-scores'>Семант.: " + (r.vector_score != null ? r.vector_score : "—") + ", FTS: " + (r.fts_score != null ? r.fts_score : "—") + ", итог: " + (r.score != null ? r.score : "—") + "</div>" +
+                  "<div class='result-content'>" + escapeHtml((r.content || "").substring(0, 300)) + (r.content && r.content.length > 300 ? "…" : "") + "</div>" +
+                  "</li>";
               }).join("") + "</ul>";
             } else {
               el.innerHTML = "<p>Ничего не найдено</p>";

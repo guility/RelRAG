@@ -15,8 +15,13 @@ class HybridSearchResult:
 
     chunk_id: UUID
     pack_id: UUID
+    document_id: UUID
     content: str
+    vector_score: float
+    fts_score: float
     score: float
+    document_title: str | None
+    metadata: dict[str, str]  # author, created_date, modified_date, page_count, size_mb, etc.
 
 
 @dataclass
@@ -67,12 +72,34 @@ class HybridSearchUseCase:
                 limit=input_data.limit,
                 property_filters=input_data.filters,
             )
-            return [
-                HybridSearchResult(
-                    chunk_id=r["chunk_id"],
-                    pack_id=r["pack_id"],
-                    content=r["content"],
-                    score=r["score"],
+            def _doc_metadata(doc_props: dict | None) -> tuple[str | None, dict[str, str]]:
+                if not doc_props or not isinstance(doc_props, dict):
+                    return None, {}
+                title = doc_props.get("title")
+                if isinstance(title, list):
+                    title = title[0] if title else None
+                title_str = str(title).strip() if title else None
+                meta: dict[str, str] = {}
+                for key in ("author", "created_date", "modified_date", "page_count", "file_size_mb"):
+                    v = doc_props.get(key)
+                    if v is not None and str(v).strip():
+                        meta[key] = str(v).strip()
+                return title_str, meta
+
+            out: list[HybridSearchResult] = []
+            for r in results:
+                doc_title, meta = _doc_metadata(r.get("doc_props"))
+                out.append(
+                    HybridSearchResult(
+                        chunk_id=r["chunk_id"],
+                        pack_id=r["pack_id"],
+                        document_id=r["document_id"],
+                        content=r["content"],
+                        vector_score=r["vector_score"],
+                        fts_score=r["fts_score"],
+                        score=r["score"],
+                        document_title=doc_title,
+                        metadata=meta,
+                    )
                 )
-                for r in results
-            ]
+            return out
