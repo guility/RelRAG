@@ -19,6 +19,8 @@ uv run python -c "import relrag; print('OK')"
 
 ## Docker + API smoke test
 
+Переменные окружения берутся из `.env.example` (можно скопировать в `.env` и отредактировать).
+
 ```bash
 docker compose up -d
 .\scripts\test_rag_api.ps1   # Windows PowerShell
@@ -26,7 +28,11 @@ docker compose up -d
 ./scripts/test_rag_api.sh   # Linux/macOS (requires jq)
 ```
 
-For full E2E (document load, search), set `EMBEDDING_API_KEY` and optionally `EMBEDDING_API_URL` in the environment or docker-compose.
+Для полного E2E (загрузка документов, поиск) задайте `EMBEDDING_API_KEY` и при необходимости `EMBEDDING_API_URL` в `.env.example` или `.env`.
+
+## Frontend (SSO)
+
+После `docker compose up -d` фронтенд доступен на http://localhost:8081. Вход через Keycloak (testuser/testpass). Локальная разработка: `python -m http.server 8081` в папке `frontend/` (предварительно задать `RELRAG_CONFIG` в index.html или config.js для API и Keycloak).
 
 ## Documentation
 

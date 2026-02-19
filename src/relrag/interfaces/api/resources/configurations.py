@@ -9,10 +9,38 @@ from relrag.domain.value_objects import ChunkingStrategy
 
 
 class ConfigurationsResource:
-    """POST /v1/configurations - create configuration."""
+    """GET/POST /v1/configurations - list and create configurations."""
 
     def __init__(self, unit_of_work_factory: type) -> None:
         self._uow_factory = unit_of_work_factory
+
+    async def on_get(self, req: falcon.asgi.Request, resp: falcon.asgi.Response) -> None:
+        """List configurations with cursor pagination."""
+        cursor = req.get_param("cursor")
+        limit = req.get_param_as_int("limit") or 20
+        limit = min(max(limit, 1), 100)
+
+        async with self._uow_factory() as uow:
+            configs, next_cursor = await uow.configurations.list(
+                cursor=cursor,
+                limit=limit,
+            )
+
+        resp.media = {
+            "items": [
+                {
+                    "id": str(c.id),
+                    "chunking_strategy": c.chunking_strategy.value,
+                    "embedding_model": c.embedding_model,
+                    "embedding_dimensions": c.embedding_dimensions,
+                    "chunk_size": c.chunk_size,
+                    "chunk_overlap": c.chunk_overlap,
+                }
+                for c in configs
+            ],
+            "next_cursor": next_cursor,
+        }
+        resp.status = falcon.HTTP_200
 
     async def on_post(self, req: falcon.asgi.Request, resp: falcon.asgi.Response) -> None:
         """Create configuration for collections."""

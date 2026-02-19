@@ -43,6 +43,12 @@ class Settings(BaseSettings):
         description="Default embedding model name",
     )
 
+    # CORS
+    cors_origins: str = Field(
+        default="http://localhost:8081",
+        description="Comma-separated CORS allowed origins",
+    )
+
     # Application
     environment: Literal["development", "staging", "production"] = Field(
         default="development",

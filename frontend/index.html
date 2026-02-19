@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>RelRAG — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>RelRAG</h1>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="configurations.html">Конфигурации</a>
+      <a href="collections.html">Коллекции</a>
+      <a href="document.html">Документ</a>
+      <button type="button" id="btnLogout">Выход</button>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Коллекции</h2>
+    <div id="collections"></div>
+    <h3>Поиск</h3>
+    <form id="formSearch">
+      <label>Коллекция <select id="searchCollection" required></select></label>
+      <label>Запрос <input type="text" id="searchQuery" placeholder="текст для поиска" required></label>
+      <button type="submit">Искать</button>
+    </form>
+    <div id="searchResults"></div>
+  </main>
+
+  <script src="vendor/keycloak.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    (function () {
+      const api = window.relragApi;
+      const auth = window.relragAuth;
+
+      function renderCollections(items) {
+        const el = document.getElementById("collections");
+        if (!items || items.length === 0) {
+          el.innerHTML = "<p>Нет коллекций. <a href='collections.html'>Создать</a></p>";
+          return;
+        }
+        el.innerHTML = "<table><thead><tr><th>ID</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
+          items.map(function (c) {
+            return "<tr><td>" + c.id + "</td><td>" + c.configuration_id + "</td><td>" + c.created_at + "</td>" +
+              "<td><a href='collection.html?id=" + c.id + "'>Открыть</a> | <a href='admin.html?collection=" + c.id + "'>Админ</a></td></tr>";
+          }).join("") + "</tbody></table>";
+      }
+
+      function loadCollections() {
+        api.get("/v1/collections").then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          if (data && data.items) {
+            renderCollections(data.items);
+            const sel = document.getElementById("searchCollection");
+            sel.innerHTML = "<option value=''>Выберите коллекцию</option>" +
+              data.items.map(function (c) {
+                return "<option value='" + c.id + "'>" + c.id + "</option>";
+              }).join("");
+          }
+        }).catch(function () {});
+      }
+
+      document.getElementById("btnLogout").onclick = function () { auth.logout(); };
+
+      document.getElementById("formSearch").onsubmit = function (e) {
+        e.preventDefault();
+        const collId = document.getElementById("searchCollection").value;
+        const query = document.getElementById("searchQuery").value;
+        if (!collId || !query) return;
+        api.post("/v1/collections/" + collId + "/search", { query: query, limit: 10 })
+          .then(function (res) { return api.handleResponse(res); })
+          .then(function (data) {
+            const el = document.getElementById("searchResults");
+            if (data && data.results && data.results.length > 0) {
+              el.innerHTML = "<ul>" + data.results.map(function (r) {
+                return "<li>" + (r.content || "").substring(0, 200) + " (score: " + r.score + ")</li>";
+              }).join("") + "</ul>";
+            } else {
+              el.innerHTML = "<p>Ничего не найдено</p>";
+            }
+          }).catch(function () {
+            document.getElementById("searchResults").innerHTML = "<p class='error'>Ошибка поиска</p>";
+          });
+      };
+
+      auth.init().then(function (authenticated) {
+        if (!authenticated) auth.login();
+        else loadCollections();
+      }).catch(function () { auth.login(); });
+    })();
+  </script>
+</body>
+</html>

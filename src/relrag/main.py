@@ -6,8 +6,11 @@ import falcon.asgi
 
 from relrag import __version__
 from relrag.application.use_cases.collection.create_collection import CreateCollectionUseCase
+from relrag.application.use_cases.collection.migrate_collection import MigrateCollectionUseCase
 from relrag.application.use_cases.document.get_document import GetDocumentUseCase
 from relrag.application.use_cases.document.load_document import LoadDocumentUseCase
+from relrag.application.use_cases.permission.assign_permission import AssignPermissionUseCase
+from relrag.application.use_cases.permission.revoke_permission import RevokePermissionUseCase
 from relrag.application.use_cases.search.hybrid_search import HybridSearchUseCase
 from relrag.config import get_settings
 from relrag.infrastructure.auth.keycloak_provider import KeycloakProvider
@@ -19,11 +22,17 @@ from relrag.infrastructure.persistence.postgres.unit_of_work import (
     create_uow_factory,
 )
 from relrag.interfaces.api.middleware.auth import AuthMiddleware
+from relrag.interfaces.api.middleware.cors import CORSMiddleware
 from relrag.interfaces.api.middleware.pool_lifespan import PoolLifespanMiddleware
 from relrag.interfaces.api.resources.collections import CollectionResource, CollectionsResource
 from relrag.interfaces.api.resources.configurations import ConfigurationsResource
 from relrag.interfaces.api.resources.documents import DocumentResource, DocumentsResource
 from relrag.interfaces.api.resources.health import HealthResource
+from relrag.interfaces.api.resources.migrate import MigrateResource
+from relrag.interfaces.api.resources.permissions import (
+    PermissionRevokeResource,
+    PermissionsResource,
+)
 from relrag.interfaces.api.resources.search import SearchResource
 
 
@@ -70,6 +79,20 @@ def create_relrag_app():
     create_collection = CreateCollectionUseCase(
         unit_of_work_factory=uow_factory,
     )
+    migrate_collection = MigrateCollectionUseCase(
+        unit_of_work_factory=uow_factory,
+        permission_checker=permission_checker,
+        chunker=chunker,
+        embedding_provider=embedding_provider,
+    )
+    assign_permission = AssignPermissionUseCase(
+        unit_of_work_factory=uow_factory,
+        permission_checker=permission_checker,
+    )
+    revoke_permission = RevokePermissionUseCase(
+        unit_of_work_factory=uow_factory,
+        permission_checker=permission_checker,
+    )
     hybrid_search = HybridSearchUseCase(
         unit_of_work_factory=uow_factory,
         permission_checker=permission_checker,
@@ -78,14 +101,24 @@ def create_relrag_app():
 
     documents_resource = DocumentsResource(load_document)
     document_resource = DocumentResource(get_document)
-    collections_resource = CollectionsResource(create_collection)
-    collection_resource = CollectionResource()
+    collections_resource = CollectionsResource(create_collection, uow_factory)
+    collection_resource = CollectionResource(uow_factory, permission_checker)
+    migrate_resource = MigrateResource(migrate_collection)
+    permissions_resource = PermissionsResource(
+        uow_factory, permission_checker, assign_permission
+    )
+    permission_revoke_resource = PermissionRevokeResource(revoke_permission)
     configurations_resource = ConfigurationsResource(uow_factory)
     search_resource = SearchResource(hybrid_search)
     health_resource = HealthResource()
 
+    cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     app = falcon.asgi.App(
-        middleware=[PoolLifespanMiddleware(pool), AuthMiddleware(keycloak)],
+        middleware=[
+            CORSMiddleware(cors_origins),
+            PoolLifespanMiddleware(pool),
+            AuthMiddleware(keycloak),
+        ],
     )
 
     async def log_exception(req, resp, ex, params):
@@ -101,6 +134,12 @@ def create_relrag_app():
     app.add_route("/v1/documents/{document_id}", document_resource)
     app.add_route("/v1/collections", collections_resource)
     app.add_route("/v1/collections/{collection_id}", collection_resource)
+    app.add_route("/v1/collections/{collection_id}/migrate", migrate_resource)
+    app.add_route("/v1/collections/{collection_id}/permissions", permissions_resource)
+    app.add_route(
+        "/v1/collections/{collection_id}/permissions/{subject}",
+        permission_revoke_resource,
+    )
     app.add_route("/v1/configurations", configurations_resource)
     app.add_route("/v1/collections/{collection_id}/search", search_resource)
 

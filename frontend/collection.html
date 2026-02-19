@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>RelRAG — Коллекция</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>RelRAG</h1>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="configurations.html">Конфигурации</a>
+      <a href="collections.html">Коллекции</a>
+      <a href="document.html">Документ</a>
+      <button type="button" id="btnLogout">Выход</button>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Коллекция <span id="collId"></span></h2>
+    <div id="info"></div>
+    <h3>Поиск</h3>
+    <form id="formSearch">
+      <label>Запрос <input type="text" id="searchQuery" placeholder="текст для поиска" required></label>
+      <button type="submit">Искать</button>
+    </form>
+    <div id="searchResults"></div>
+    <h3>Загрузить документ</h3>
+    <form id="formDoc">
+      <label>Текст <textarea id="docContent" rows="5" required></textarea></label>
+      <button type="submit">Загрузить</button>
+    </form>
+    <p><a href="admin.html" id="adminLink">Админ-панель</a></p>
+  </main>
+
+  <script src="vendor/keycloak.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    (function () {
+      const api = window.relragApi;
+      const auth = window.relragAuth;
+      const params = new URLSearchParams(window.location.search);
+      const collId = params.get("id");
+
+      if (!collId) {
+        document.body.innerHTML = "<p>Не указан ID коллекции. <a href='collections.html'>К коллекциям</a></p>";
+        throw new Error("No collection id");
+      }
+
+      document.getElementById("collId").textContent = collId;
+      document.getElementById("adminLink").href = "admin.html?collection=" + collId;
+
+      function loadInfo() {
+        api.get("/v1/collections/" + collId).then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          const el = document.getElementById("info");
+          if (data && data.id) {
+            el.innerHTML = "<p>Конфигурация: " + data.configuration_id + "</p>";
+          } else {
+            el.innerHTML = "<p class='error'>Не удалось загрузить</p>";
+          }
+        }).catch(function () {
+          document.getElementById("info").innerHTML = "<p class='error'>Ошибка</p>";
+        });
+      }
+
+      document.getElementById("btnLogout").onclick = function () { auth.logout(); };
+
+      document.getElementById("formSearch").onsubmit = function (e) {
+        e.preventDefault();
+        const query = document.getElementById("searchQuery").value;
+        api.post("/v1/collections/" + collId + "/search", { query: query, limit: 10 })
+          .then(function (res) { return api.handleResponse(res); })
+          .then(function (data) {
+            const el = document.getElementById("searchResults");
+            if (data && data.results && data.results.length > 0) {
+              el.innerHTML = "<ul>" + data.results.map(function (r) {
+                return "<li>" + (r.content || "").substring(0, 200) + " (score: " + r.score + ")</li>";
+              }).join("") + "</ul>";
+            } else {
+              el.innerHTML = "<p>Ничего не найдено</p>";
+            }
+          }).catch(function () {
+            document.getElementById("searchResults").innerHTML = "<p class='error'>Ошибка поиска</p>";
+          });
+      };
+
+      document.getElementById("formDoc").onsubmit = function (e) {
+        e.preventDefault();
+        const content = document.getElementById("docContent").value;
+        api.post("/v1/documents", { collection_id: collId, content: content, properties: {} })
+          .then(function (res) { return api.handleResponse(res); })
+          .then(function (data) {
+            if (data && data.id) {
+              document.getElementById("docContent").value = "";
+              document.getElementById("searchResults").innerHTML = "<p class='success'>Документ загружен</p>";
+            }
+          }).catch(function () {
+            document.getElementById("searchResults").innerHTML = "<p class='error'>Ошибка загрузки</p>";
+          });
+      };
+
+      auth.init().then(function (authenticated) {
+        if (!authenticated) auth.login();
+        else loadInfo();
+      }).catch(function () { auth.login(); });
+    })();
+  </script>
+</body>
+</html>

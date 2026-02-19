@@ -1,18 +1,18 @@
+# Переменные подставляются из .env (скопируйте: cp .env.example .env)
+# Или: docker compose --env-file .env.example up -d
+
 services:
   relrag-api:
     build: .
+    env_file: .env.example
     command: sh -c "alembic upgrade head && exec uvicorn relrag.main:create_relrag_app --factory --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     environment:
+      # Переопределения для Docker-сети (остальное из env_file)
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/relrag
-      DEBUG: "true"
-      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://api.openai.com/v1}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: relrag
-      KEYCLOAK_CLIENT_ID: relrag-api
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-relrag-api-secret}
+      CORS_ORIGINS: http://localhost:8081,http://relrag-app:8081
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +41,15 @@ services:
       timeout: 5s
       retries: 15
       start_period: 90s
+
+  relrag-app:
+    image: nginx:alpine
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    command: ["nginx", "-g", "daemon off;"]
 
   postgres:
     image: pgvector/pgvector:pg18

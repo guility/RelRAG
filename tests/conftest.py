@@ -1,5 +1,7 @@
 """Pytest fixtures for RelRAG tests."""
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -269,6 +271,16 @@ class FakeCollectionRepository:
         page = items[start : start + limit + 1]
         next_cursor = str(page[limit].id) if len(page) > limit else None
         return (page[:limit], next_cursor)
+
+    async def list_by_subject(
+        self,
+        subject: str,
+        *,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> tuple[list[Collection], str | None]:
+        """List collections where subject has permission. Delegates to list for fake."""
+        return await self.list(cursor=cursor, limit=limit, include_deleted=False)
 
     async def create(self, collection: Collection) -> Collection:
         self._by_id[collection.id] = collection

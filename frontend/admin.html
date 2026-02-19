@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>RelRAG — Админ</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>RelRAG</h1>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="configurations.html">Конфигурации</a>
+      <a href="collections.html">Коллекции</a>
+      <a href="document.html">Документ</a>
+      <button type="button" id="btnLogout">Выход</button>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Админ-панель</h2>
+    <p id="collInfo"></p>
+
+    <h3>Миграция коллекции</h3>
+    <form id="formMigrate">
+      <label>Коллекция <select id="migrateColl"></select></label>
+      <label>Новая конфигурация <select id="migrateConfig"></select></label>
+      <button type="submit">Мигрировать</button>
+    </form>
+    <div id="migrateMsg"></div>
+
+    <h3>Права доступа</h3>
+    <form id="formAssign">
+      <label>Коллекция <select id="permColl"></select></label>
+      <label>Пользователь (subject) <input type="text" id="permSubject" placeholder="user-id из Keycloak"></label>
+      <label>Роль <select id="permRole">
+        <option value="viewer">viewer</option>
+        <option value="editor">editor</option>
+        <option value="admin">admin</option>
+      </select></label>
+      <button type="submit">Назначить</button>
+    </form>
+    <div id="permList"></div>
+    <form id="formRevoke">
+      <label>Отозвать право: пользователь <input type="text" id="revokeSubject" placeholder="user-id"></label>
+      <button type="submit">Отозвать</button>
+    </form>
+  </main>
+
+  <script src="vendor/keycloak.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    (function () {
+      const api = window.relragApi;
+      const auth = window.relragAuth;
+      const params = new URLSearchParams(window.location.search);
+      const collId = params.get("collection");
+
+      function fillSelect(selId, items, valKey, labelKey) {
+        var sel = document.getElementById(selId);
+        if (!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = "<option value=''>Выберите</option>";
+        (items || []).forEach(function (it) {
+          var v = it[valKey] || it.id;
+          var l = it[labelKey] || v;
+          sel.innerHTML += "<option value='" + v + "'>" + l + "</option>";
+        });
+        if (collId && selId.indexOf("Coll") >= 0) sel.value = collId;
+      }
+
+      function loadCollections() {
+        api.get("/v1/collections").then(function (r) { return api.handleResponse(r); }).then(function (d) {
+          if (d && d.items) {
+            fillSelect("migrateColl", d.items, "id", "id");
+            fillSelect("permColl", d.items, "id", "id");
+            if (collId) {
+              document.getElementById("migrateColl").value = collId;
+              document.getElementById("permColl").value = collId;
+              loadPerms(collId);
+            }
+          }
+        }).catch(function () {});
+      }
+
+      function loadConfigs() {
+        api.get("/v1/configurations").then(function (r) { return api.handleResponse(r); }).then(function (d) {
+          if (d && d.items) fillSelect("migrateConfig", d.items, "id", "id");
+        }).catch(function () {});
+      }
+
+      function loadPerms(cid) {
+        if (!cid) return;
+        api.get("/v1/collections/" + cid + "/permissions").then(function (r) { return api.handleResponse(r); }).then(function (d) {
+          var el = document.getElementById("permList");
+          if (d && d.items && d.items.length > 0) {
+            el.innerHTML = "<table><thead><tr><th>Subject</th><th>Роль</th></tr></thead><tbody>" +
+              d.items.map(function (p) { return "<tr><td>" + p.subject + "</td><td>" + p.role + "</td></tr>"; }).join("") + "</tbody></table>";
+          } else {
+            el.innerHTML = "<p>Нет прав</p>";
+          }
+        }).catch(function () { document.getElementById("permList").innerHTML = "<p class='error'>Нет доступа</p>"; });
+      }
+
+      document.getElementById("btnLogout").onclick = function () { auth.logout(); };
+
+      document.getElementById("formMigrate").onsubmit = function (e) {
+        e.preventDefault();
+        var cid = document.getElementById("migrateColl").value;
+        var configId = document.getElementById("migrateConfig").value;
+        if (!cid || !configId) return;
+        api.post("/v1/collections/" + cid + "/migrate", { new_configuration_id: configId })
+          .then(function (r) { return api.handleResponse(r); })
+          .then(function (d) {
+            document.getElementById("migrateMsg").innerHTML = "<p class='success'>Мигрировано: " + (d && d.migrated) + " документов</p>";
+          }).catch(function () {
+            document.getElementById("migrateMsg").innerHTML = "<p class='error'>Ошибка миграции</p>";
+          });
+      };
+
+      document.getElementById("formAssign").onsubmit = function (e) {
+        e.preventDefault();
+        var cid = document.getElementById("permColl").value;
+        var subj = document.getElementById("permSubject").value;
+        var role = document.getElementById("permRole").value;
+        if (!cid || !subj) return;
+        api.post("/v1/collections/" + cid + "/permissions", { subject: subj, role: role })
+          .then(function (r) { return api.handleResponse(r); })
+          .then(function () {
+            loadPerms(cid);
+            document.getElementById("permSubject").value = "";
+          }).catch(function () {});
+      };
+
+      document.getElementById("formRevoke").onsubmit = function (e) {
+        e.preventDefault();
+        var cid = document.getElementById("permColl").value;
+        var subj = document.getElementById("revokeSubject").value;
+        if (!cid || !subj) return;
+        api.delete("/v1/collections/" + cid + "/permissions/" + encodeURIComponent(subj))
+          .then(function (r) {
+            if (r.status === 204) { loadPerms(cid); document.getElementById("revokeSubject").value = ""; }
+          }).catch(function () {});
+      };
+
+      document.getElementById("permColl").onchange = function () {
+        loadPerms(this.value);
+      };
+
+      if (collId) document.getElementById("collInfo").textContent = "Коллекция: " + collId;
+
+      auth.init().then(function (authenticated) {
+        if (!authenticated) auth.login();
+        else {
+          loadCollections();
+          loadConfigs();
+        }
+      }).catch(function () { auth.login(); });
+    })();
+  </script>
+</body>
+</html>

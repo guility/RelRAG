@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>RelRAG — Конфигурации</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>RelRAG</h1>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="configurations.html">Конфигурации</a>
+      <a href="collections.html">Коллекции</a>
+      <a href="document.html">Документ</a>
+      <button type="button" id="btnLogout">Выход</button>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Конфигурации</h2>
+    <form id="formCreate">
+      <label>Стратегия чанкинга <select id="chunking" name="chunking_strategy">
+        <option value="recursive">recursive</option>
+      </select></label>
+      <label>Модель эмбеддингов <input type="text" name="embedding_model" value="text-embedding-3-small"></label>
+      <label>Размерность <input type="number" name="embedding_dimensions" value="1536"></label>
+      <label>Размер чанка <input type="number" name="chunk_size" value="512"></label>
+      <label>Перекрытие <input type="number" name="chunk_overlap" value="50"></label>
+      <button type="submit">Создать</button>
+    </form>
+    <div id="list"></div>
+  </main>
+
+  <script src="vendor/keycloak.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    (function () {
+      const api = window.relragApi;
+      const auth = window.relragAuth;
+
+      function loadList() {
+        api.get("/v1/configurations").then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          const el = document.getElementById("list");
+          if (data && data.items && data.items.length > 0) {
+            el.innerHTML = "<table><thead><tr><th>ID</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
+              data.items.map(function (c) {
+                return "<tr><td>" + c.id + "</td><td>" + c.embedding_model + "</td><td>" + c.chunk_size + "</td><td>" + c.chunk_overlap + "</td></tr>";
+              }).join("") + "</tbody></table>";
+          } else {
+            el.innerHTML = "<p>Нет конфигураций</p>";
+          }
+        }).catch(function () {});
+      }
+
+      document.getElementById("btnLogout").onclick = function () { auth.logout(); };
+
+      document.getElementById("formCreate").onsubmit = function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const body = {
+          chunking_strategy: form.chunking_strategy.value,
+          embedding_model: form.embedding_model.value,
+          embedding_dimensions: parseInt(form.embedding_dimensions.value, 10),
+          chunk_size: parseInt(form.chunk_size.value, 10),
+          chunk_overlap: parseInt(form.chunk_overlap.value, 10),
+        };
+        api.post("/v1/configurations", body).then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          if (data && data.id) {
+            loadList();
+            form.reset();
+          }
+        }).catch(function () {});
+      };
+
+      auth.init().then(function (authenticated) {
+        if (!authenticated) auth.login();
+        else loadList();
+      }).catch(function () { auth.login(); });
+    })();
+  </script>
+</body>
+</html>

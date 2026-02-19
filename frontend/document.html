@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>RelRAG — Загрузка документа</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>RelRAG</h1>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="configurations.html">Конфигурации</a>
+      <a href="collections.html">Коллекции</a>
+      <a href="document.html">Документ</a>
+      <button type="button" id="btnLogout">Выход</button>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Загрузить документ</h2>
+    <form id="formDoc">
+      <label>Коллекция <select id="collId" required></select></label>
+      <label>Текст <textarea id="docContent" rows="10" required></textarea></label>
+      <button type="submit">Загрузить</button>
+    </form>
+    <div id="msg"></div>
+  </main>
+
+  <script src="vendor/keycloak.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    (function () {
+      const api = window.relragApi;
+      const auth = window.relragAuth;
+
+      function loadCollections() {
+        api.get("/v1/collections").then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          const sel = document.getElementById("collId");
+          sel.innerHTML = "<option value=''>Выберите коллекцию</option>";
+          if (data && data.items) {
+            data.items.forEach(function (c) {
+              sel.innerHTML += "<option value='" + c.id + "'>" + c.id + "</option>";
+            });
+          }
+        }).catch(function () {});
+      }
+
+      document.getElementById("btnLogout").onclick = function () { auth.logout(); };
+
+      document.getElementById("formDoc").onsubmit = function (e) {
+        e.preventDefault();
+        const collId = document.getElementById("collId").value;
+        const content = document.getElementById("docContent").value;
+        if (!collId || !content) return;
+        api.post("/v1/documents", { collection_id: collId, content: content, properties: {} })
+          .then(function (res) { return api.handleResponse(res); })
+          .then(function (data) {
+            const el = document.getElementById("msg");
+            if (data && data.id) {
+              el.innerHTML = "<p class='success'>Документ загружен: " + data.id + "</p>";
+              document.getElementById("docContent").value = "";
+            } else {
+              el.innerHTML = "<p class='error'>Ошибка</p>";
+            }
+          }).catch(function () {
+            document.getElementById("msg").innerHTML = "<p class='error'>Ошибка загрузки</p>";
+          });
+      };
+
+      auth.init().then(function (authenticated) {
+        if (!authenticated) auth.login();
+        else loadCollections();
+      }).catch(function () { auth.login(); });
+    })();
+  </script>
+</body>
+</html>

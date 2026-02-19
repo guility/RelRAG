@@ -68,6 +68,41 @@ class PostgresCollectionRepository:
         next_cursor = str(rows[limit][0]) if len(rows) > limit else None
         return colls, next_cursor
 
+    async def list_by_subject(
+        self,
+        subject: str,
+        *,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> tuple[list[Collection], str | None]:
+        """List collections where subject has permission, with cursor pagination."""
+        conditions = ["c.deleted_at IS NULL", "p.subject = %s"]
+        _params: list[object] = [subject]
+        if cursor:
+            conditions.append("c.id > %s")
+            _params.append(UUID(cursor))
+        where = " AND ".join(conditions)
+        params = tuple(_params) + (limit + 1,)
+        q = (
+            "SELECT DISTINCT c.id, c.configuration_id, c.created_at, c.updated_at, c.deleted_at "
+            "FROM collection c JOIN permission p ON p.collection_id = c.id "
+            f"WHERE {where} ORDER BY c.id LIMIT %s"
+        )
+        cur = await self._conn.execute(q, params)
+        rows = await cur.fetchall()
+        colls = [
+            Collection(
+                id=r[0],
+                configuration_id=r[1],
+                created_at=r[2],
+                updated_at=r[3],
+                deleted_at=r[4],
+            )
+            for r in rows[:limit]
+        ]
+        next_cursor = str(rows[limit][0]) if len(rows) > limit else None
+        return colls, next_cursor
+
     async def create(self, collection: Collection) -> Collection:
         """Create collection."""
         await self._conn.execute(

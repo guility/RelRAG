@@ -33,6 +33,40 @@ class PostgresConfigurationRepository:
             chunk_overlap=r[5],
         )
 
+    async def list(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> tuple[list[Configuration], str | None]:
+        """List configurations with cursor pagination."""
+        conditions = []
+        _params: list[object] = []
+        if cursor:
+            conditions.append("id > %s")
+            _params.append(UUID(cursor))
+        where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+        params = tuple(_params) + (limit + 1,)
+        q = (
+            "SELECT id, chunking_strategy, embedding_model, embedding_dimensions, "
+            f"chunk_size, chunk_overlap FROM configuration{where} ORDER BY id LIMIT %s"
+        )
+        cur = await self._conn.execute(q, params)
+        rows = await cur.fetchall()
+        configs = [
+            Configuration(
+                id=r[0],
+                chunking_strategy=ChunkingStrategy(r[1]),
+                embedding_model=r[2],
+                embedding_dimensions=r[3],
+                chunk_size=r[4],
+                chunk_overlap=r[5],
+            )
+            for r in rows[:limit]
+        ]
+        next_cursor = str(rows[limit][0]) if len(rows) > limit else None
+        return configs, next_cursor
+
     async def get_by_collection_id(self, collection_id: UUID) -> Configuration | None:
         """Get configuration for collection."""
         cur = await self._conn.execute(
