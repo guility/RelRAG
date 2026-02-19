@@ -33,8 +33,14 @@
       <label>Коллекция <select id="collId" required></select></label>
       <label>Файлы <input type="file" id="fileInput" name="files" multiple accept=".txt,.md,.csv,.tsv,.docx,.pdf,.xlsx,.pptx,.epub"></label>
       <label>Или текст <textarea id="docContent" rows="10" placeholder="вставьте текст или выберите файлы выше"></textarea></label>
-      <button type="submit">Загрузить</button>
+      <button type="submit" id="btnSubmit">Загрузить</button>
     </form>
+    <div id="uploadProgress" class="upload-progress" style="display:none" aria-live="polite">
+      <div class="upload-progress-bar-wrap">
+        <div class="upload-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      <div class="upload-progress-label"></div>
+    </div>
     <div id="msg"></div>
   </main>
 
@@ -61,7 +67,9 @@
               sel.innerHTML += "<option value='" + c.id + "'>" + escapeHtml(label) + "</option>";
             });
           }
-        }).catch(function () {});
+        }).catch(function (err) {
+          api.showError(err, "msg", "Не удалось загрузить коллекции:");
+        });
       }
 
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
@@ -84,24 +92,92 @@
           const token = auth.getToken();
           const headers = {};
           if (token) headers["Authorization"] = "Bearer " + token;
-          fetch(API_URL + "/v1/documents", {
+          const progressEl = document.getElementById("uploadProgress");
+          const barEl = progressEl.querySelector(".upload-progress-bar");
+          const labelEl = progressEl.querySelector(".upload-progress-label");
+          const msgEl = document.getElementById("msg");
+          const btnSubmit = document.getElementById("btnSubmit");
+          msgEl.innerHTML = "";
+          progressEl.style.display = "block";
+          barEl.style.width = "0%";
+          barEl.setAttribute("aria-valuenow", "0");
+          labelEl.textContent = "Подготовка…";
+          btnSubmit.disabled = true;
+          fetch(API_URL + "/v1/documents/stream", {
             method: "POST",
             headers: headers,
             body: formData,
             credentials: "omit",
-          }).then(function (res) { return api.handleResponse(res); }).then(function (data) {
-            const el = document.getElementById("msg");
-            if (data && data.documents && data.documents.length > 0) {
-              var errStr = data.errors && data.errors.length ? " Ошибки: " + data.errors.length : "";
-              el.innerHTML = "<p class='success'>Загружено документов: " + data.documents.length + errStr + "</p>";
-              fileInput.value = "";
-            } else if (data && data.errors && data.errors.length > 0) {
-              el.innerHTML = "<p class='error'>Ошибки загрузки: " + data.errors.map(function (x) { return x.filename + " — " + x.error; }).join("; ") + "</p>";
-            } else {
-              el.innerHTML = "<p class='error'>Не удалось загрузить</p>";
+          }).then(function (res) {
+            if (!res.ok) {
+              return res.json().then(function (data) {
+                return Promise.reject({ status: res.status, message: (data && data.error) || res.statusText });
+              }).catch(function (e) {
+                if (e && (e.status !== undefined || e.message)) return Promise.reject(e);
+                return Promise.reject({ status: res.status, message: res.statusText });
+              });
             }
-          }).catch(function () {
-            document.getElementById("msg").innerHTML = "<p class='error'>Ошибка загрузки</p>";
+            if (!res.body) return Promise.reject({ message: "No response body" });
+            var buf = "";
+            var dec = new TextDecoder();
+            var reader = res.body.getReader();
+            function processBlock(block) {
+              var eventType = "";
+              var dataStr = "";
+              block.split("\n").forEach(function (line) {
+                if (line.indexOf("event: ") === 0) eventType = line.slice(7).trim();
+                if (line.indexOf("data: ") === 0) dataStr = line.slice(6);
+              });
+              if (!dataStr) return;
+              try {
+                var data = JSON.parse(dataStr);
+                if (eventType === "progress") {
+                  var total = data.total || 1;
+                  var current = data.current || 0;
+                  var pct = total ? Math.round((current / total) * 100) : 0;
+                  barEl.style.width = pct + "%";
+                  barEl.setAttribute("aria-valuenow", String(pct));
+                  labelEl.textContent = data.status === "processing"
+                    ? "Обработка " + current + " из " + total + ": " + (data.filename || "")
+                    : (data.filename || "") + " — " + (data.status === "ok" ? "готово" : (data.error || data.status));
+                } else if (eventType === "done") {
+                  progressEl.style.display = "none";
+                  btnSubmit.disabled = false;
+                  if (data.documents && data.documents.length > 0) {
+                    var errStr = data.errors && data.errors.length ? " Ошибки: " + data.errors.length : "";
+                    msgEl.innerHTML = "<p class='success'>Загружено документов: " + data.documents.length + errStr + "</p>";
+                    fileInput.value = "";
+                  } else if (data.errors && data.errors.length > 0) {
+                    msgEl.innerHTML = "<p class='error'>Ошибки загрузки: " + data.errors.map(function (x) { return x.filename + " — " + x.error; }).join("; ") + "</p>";
+                  } else {
+                    msgEl.innerHTML = "<p class='error'>Не удалось загрузить</p>";
+                  }
+                } else if (eventType === "error") {
+                  progressEl.style.display = "none";
+                  btnSubmit.disabled = false;
+                  api.showError({ message: data.message || "Ошибка загрузки" }, "msg", "Ошибка загрузки файлов:");
+                }
+              } catch (e) { /* ignore parse errors */ }
+            }
+            function pump() {
+              return reader.read().then(function (result) {
+                if (result.done) {
+                  progressEl.style.display = "none";
+                  btnSubmit.disabled = false;
+                  return;
+                }
+                buf += dec.decode(result.value, { stream: true });
+                var parts = buf.split("\n\n");
+                buf = parts.pop() || "";
+                parts.forEach(processBlock);
+                return pump();
+              });
+            }
+            return pump();
+          }).catch(function (err) {
+            progressEl.style.display = "none";
+            btnSubmit.disabled = false;
+            api.showError(err, "msg", "Ошибка загрузки файлов:");
           });
           return;
         }
@@ -116,8 +192,8 @@
             } else {
               el.innerHTML = "<p class='error'>Ошибка</p>";
             }
-          }).catch(function () {
-            document.getElementById("msg").innerHTML = "<p class='error'>Ошибка загрузки</p>";
+          }).catch(function (err) {
+            api.showError(err, "msg", "Ошибка загрузки документа:");
           });
       };
 

@@ -27,7 +27,11 @@ from relrag.interfaces.api.middleware.pool_lifespan import PoolLifespanMiddlewar
 from relrag.interfaces.api.resources.collections import CollectionResource, CollectionsResource
 from relrag.interfaces.api.resources.configurations import ConfigurationsResource
 from relrag.interfaces.api.resources.models import ModelsResource
-from relrag.interfaces.api.resources.documents import DocumentResource, DocumentsResource
+from relrag.interfaces.api.resources.documents import (
+    DocumentResource,
+    DocumentsResource,
+    DocumentsStreamResource,
+)
 from relrag.interfaces.api.resources.health import HealthResource
 from relrag.interfaces.api.resources.migrate import MigrateResource
 from relrag.interfaces.api.resources.permissions import (
@@ -102,6 +106,7 @@ def create_relrag_app():
     )
 
     documents_resource = DocumentsResource(load_document)
+    documents_stream_resource = DocumentsStreamResource(load_document)
     document_resource = DocumentResource(get_document)
     collections_resource = CollectionsResource(create_collection, uow_factory)
     collection_resource = CollectionResource(uow_factory, permission_checker)
@@ -137,6 +142,7 @@ def create_relrag_app():
     app.add_route("/v1/health", health_resource)
     app.add_route("/v1/health/ready", health_resource, suffix="ready")
     app.add_route("/v1/models", models_resource)
+    app.add_route("/v1/documents/stream", documents_stream_resource)
     app.add_route("/v1/documents", documents_resource)
     app.add_route("/v1/documents/{document_id}", document_resource)
     app.add_route("/v1/collections", collections_resource)

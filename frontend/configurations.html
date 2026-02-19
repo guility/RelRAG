@@ -63,9 +63,10 @@
               sel.innerHTML += "<option value='" + m.id + "'>" + m.id + " (" + m.dimensions + "d)</option>";
             });
           }
-        }).catch(function () {
+        }).catch(function (err) {
+          api.showError(err, "list", "Не удалось загрузить модели эмбеддингов:");
           var sel = document.getElementById("embeddingModel");
-          sel.innerHTML = "<option value=''>Нет моделей</option><option value='text-embedding-3-small'>text-embedding-3-small (1536d)</option><option value='evraz-gte-qwen2-embed'>evraz-gte-qwen2-embed (1024d)</option>";
+          if (sel) sel.innerHTML = "<option value=''>Выберите модель</option>";
         });
       }
 
@@ -75,15 +76,17 @@
         }).then(function (data) {
           const el = document.getElementById("list");
           if (data && data.items && data.items.length > 0) {
-            el.innerHTML = "<div class='card'><table><thead><tr><th>Название</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
+            el.innerHTML = "<div class='card'><div class='table-wrap'><table><thead><tr><th>Название</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
               data.items.map(function (c) {
                 var name = (c.name && c.name.trim()) ? c.name : c.id;
                 return "<tr><td>" + escapeHtml(name) + "</td><td>" + escapeHtml(c.embedding_model) + "</td><td>" + c.chunk_size + "</td><td>" + c.chunk_overlap + "</td></tr>";
-              }).join("") + "</tbody></table></div>";
+              }).join("") + "</tbody></table></div></div>";
           } else {
             el.innerHTML = "<p>Нет конфигураций</p>";
           }
-        }).catch(function () {});
+        }).catch(function (err) {
+          api.showError(err, "list", "Не удалось загрузить конфигурации:");
+        });
       }
 
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
@@ -108,7 +111,9 @@
             form.reset();
             document.getElementById("embeddingModel").value = "";
           }
-        }).catch(function () {});
+        }).catch(function (err) {
+          api.showError(err, "list", "Не удалось создать конфигурацию:");
+        });
       };
 
       auth.init().then(function (authenticated) {

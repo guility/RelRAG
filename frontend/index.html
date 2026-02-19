@@ -46,13 +46,13 @@
     <form id="formSearch">
       <label>Коллекция <select id="searchCollection" required></select></label>
       <label>Запрос <input type="text" id="searchQuery" placeholder="текст для поиска" required></label>
-      <div class="search-options" style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:0.5rem">
-        <label>Доля семантического (0–1) <input type="number" id="searchVectorWeight" min="0" max="1" step="0.1" value="0.7" style="width:4rem"></label>
-        <label>Доля полнотекстового (0–1) <input type="number" id="searchFtsWeight" min="0" max="1" step="0.1" value="0.3" style="width:4rem"></label>
-        <label>Макс. результатов <input type="number" id="searchLimit" min="1" max="100" value="10" style="width:4rem"></label>
+      <div class="search-options">
+        <label>Доля семантического (0–1) <input type="number" id="searchVectorWeight" min="0" max="1" step="0.1" value="0.7"></label>
+        <label>Доля полнотекстового (0–1) <input type="number" id="searchFtsWeight" min="0" max="1" step="0.1" value="0.3"></label>
+        <label>Макс. результатов <input type="number" id="searchLimit" min="1" max="100" value="10"></label>
       </div>
-      <div id="searchFilters" class="card" style="margin-top:1rem;display:none;"></div>
-      <button type="submit" style="margin-top:1rem">Искать</button>
+      <div id="searchFilters" class="card search-filters-wrap" style="display:none"></div>
+      <button type="submit">Искать</button>
     </form>
     <div id="searchResults"></div>
   </main>
@@ -80,12 +80,12 @@
         }
         if (hintColl) hintColl.style.display = "none";
         if (hintSearch) hintSearch.style.display = "block";
-        el.innerHTML = "<div class='card'><table><thead><tr><th>Название</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
+        el.innerHTML = "<div class='card'><div class='table-wrap'><table><thead><tr><th>Название</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
           items.map(function (c) {
             var name = (c.name && c.name.trim()) ? c.name : c.id;
             return "<tr><td>" + escapeHtml(name) + "</td><td>" + escapeHtml(c.configuration_id) + "</td><td>" + c.created_at + "</td>" +
               "<td><a href='collection.html?id=" + c.id + "'>Открыть</a> | <a href='admin.html?collection=" + c.id + "'>Админ</a></td></tr>";
-          }).join("") + "</tbody></table></div>";
+          }).join("") + "</tbody></table></div></div>";
       }
 
       function loadCollections() {
@@ -101,7 +101,9 @@
                 return "<option value='" + c.id + "'>" + escapeHtml(label) + "</option>";
               }).join("");
           }
-        }).catch(function () {});
+        }).catch(function (err) {
+          api.showError(err, "collections", "Не удалось загрузить коллекции:");
+        });
       }
 
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
@@ -124,20 +126,20 @@
           if (prop.type === "string" && prop.values && prop.values.length > 0) {
             block.innerHTML = "<span class='filter-block-label'>" + escapeHtml(label) + " (мультивыбор)</span> " +
               "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>" +
-              "<input type='text' class='filter-search' placeholder='Поиск...' style='width:100%;max-width:300px;margin:4px 0'>" +
-              "<div class='filter-values' style='max-height:100px;overflow-y:auto'>" +
+              "<input type='text' class='filter-search' placeholder='Поиск...'>" +
+              "<div class='filter-values'>" +
               (prop.values.map(function (v) {
-                return "<label style='display:block'><input type='checkbox' class='filter-one-of' value=\"" + String(v).replace(/"/g, "&quot;") + "\"> " + escapeHtml(String(v)) + "</label>";
+                return "<label class='filter-value-label'><input type='checkbox' class='filter-one-of' value=\"" + String(v).replace(/"/g, "&quot;") + "\"> " + escapeHtml(String(v)) + "</label>";
               }).join("")) + "</div>";
           } else if (prop.type === "bool") {
-            block.innerHTML = "<label style='display:inline'><input type='checkbox' class='filter-bool'> " + escapeHtml(label) + " (да)</label> " +
+            block.innerHTML = "<label class='filter-bool-label'><input type='checkbox' class='filter-bool'> " + escapeHtml(label) + " (да)</label> " +
               "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>";
           } else if (prop.type === "int" || prop.type === "float" || prop.type === "date") {
             var inputType = prop.type === "date" ? "date" : "number";
             block.innerHTML = "<span class='filter-block-label'>" + escapeHtml(label) + "</span> " +
               "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>" +
-              "<span>От <input type='" + inputType + "' class='filter-gte' style='width:120px'></span> " +
-              "<span>До <input type='" + inputType + "' class='filter-lte' style='width:120px'></span>";
+              "<span>От <input type='" + inputType + "' class='filter-gte'></span> " +
+              "<span>До <input type='" + inputType + "' class='filter-lte'></span>";
           } else {
             block.innerHTML = "<span class='filter-block-label'>" + escapeHtml(label) + " (тип: " + prop.type + ")</span> " +
               "<button type='button' class='filter-remove-btn' data-key='" + escapeHtml(prop.key) + "' aria-label='Удалить'>×</button>";
@@ -168,25 +170,52 @@
         var wrap = document.createElement("div");
         wrap.className = "search-filters-card card";
         wrap.innerHTML = "<strong>Фильтры по свойствам</strong>" +
-          "<div class='filter-add-dropdown'>" +
           "<button type='button' class='btn outlined' id='btnAddFilter'>Добавить фильтр</button>" +
-          "<div class='filter-add-panel' id='filterAddPanel' style='display:none'>" +
-          "<input type='text' class='filter-add-input' id='filterAddSearch' placeholder='Поиск свойств...'>" +
-          "<div id='filterAddList'></div>" +
+          "<div class='filter-add-modal-overlay' id='filterAddModalOverlay' aria-hidden='true'>" +
+          "<div class='filter-add-modal' role='dialog' aria-labelledby='filterAddModalTitle' aria-modal='true'>" +
+          "<div class='filter-add-modal-header'>" +
+          "<h4 id='filterAddModalTitle'>Добавить фильтр</h4>" +
+          "<button type='button' class='filter-add-modal-close' id='btnFilterAddClose' aria-label='Закрыть'>×</button>" +
+          "</div>" +
+          "<input type='text' class='filter-add-input' id='filterAddSearch' placeholder='Поиск свойств...' autocomplete='off'>" +
+          "<div id='filterAddList' class='filter-add-modal-list'></div>" +
           "</div>" +
           "</div>" +
           "<div id='searchFilterBlocks'></div>";
         container.innerHTML = "";
         container.appendChild(wrap);
         container.style.display = "block";
-        var panel = document.getElementById("filterAddPanel");
+        var overlay = document.getElementById("filterAddModalOverlay");
         var listEl = document.getElementById("filterAddList");
         var searchInput = document.getElementById("filterAddSearch");
+        function openFilterModal() {
+          overlay.classList.add("is-open");
+          overlay.setAttribute("aria-hidden", "false");
+          searchInput.value = "";
+          filterAddListFilter("");
+          searchInput.focus();
+        }
+        function closeFilterModal() {
+          overlay.classList.remove("is-open");
+          overlay.setAttribute("aria-hidden", "true");
+        }
         document.getElementById("btnAddFilter").onclick = function (e) {
           e.preventDefault();
-          panel.style.display = panel.style.display === "none" ? "block" : "none";
-          if (panel.style.display === "block") { searchInput.value = ""; filterAddListFilter(""); }
+          openFilterModal();
         };
+        document.getElementById("btnFilterAddClose").onclick = function (e) {
+          e.preventDefault();
+          closeFilterModal();
+        };
+        overlay.onclick = function (e) {
+          if (e.target === overlay) closeFilterModal();
+        };
+        document.getElementById("filterAddModalOverlay").querySelector(".filter-add-modal").onclick = function (e) {
+          e.stopPropagation();
+        };
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && overlay.classList.contains("is-open")) closeFilterModal();
+        });
         function filterAddListFilter(q) {
           q = (q || "").toLowerCase();
           listEl.innerHTML = propertySchema.filter(function (p) {
@@ -200,19 +229,13 @@
                 activeFilterKeys.push(cb.value);
                 renderFilterBlocks();
                 cb.checked = false;
-                panel.style.display = "none";
+                closeFilterModal();
               }
             };
           });
         }
         searchInput.oninput = function () { filterAddListFilter(searchInput.value); };
-        searchInput.onfocus = function () { if (panel.style.display === "none") panel.style.display = "block"; };
         filterAddListFilter("");
-        document.addEventListener("click", function (e) {
-          if (panel && panel.style.display === "block" && !panel.contains(e.target) && e.target.id !== "btnAddFilter") {
-            panel.style.display = "none";
-          }
-        });
       }
       function loadPropertySchema(cid) {
         if (!cid) {
@@ -235,8 +258,10 @@
           activeFilterKeys = [];
           buildFilterDropdown();
           renderFilterBlocks();
-        }).catch(function () {
-          document.getElementById("searchFilters").style.display = "none";
+        }).catch(function (err) {
+          var c = document.getElementById("searchFilters");
+          if (c) c.style.display = "block";
+          api.showError(err, "searchFilters", "Не удалось загрузить фильтры:");
         });
       }
       function gatherFilters() {
@@ -309,8 +334,8 @@
             } else {
               el.innerHTML = "<p>Ничего не найдено</p>";
             }
-          }).catch(function () {
-            document.getElementById("searchResults").innerHTML = "<p class='error'>Ошибка поиска</p>";
+          }).catch(function (err) {
+            api.showError(err, "searchResults", "Ошибка поиска:");
           });
       };
 

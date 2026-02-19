@@ -89,13 +89,17 @@
               loadPerms(collId);
             }
           }
-        }).catch(function () {});
+        }).catch(function (err) {
+          api.showError(err, "migrateMsg", "Не удалось загрузить коллекции:");
+        });
       }
 
       function loadConfigs() {
         return api.get("/v1/configurations").then(function (r) { return api.handleResponse(r); }).then(function (d) {
           if (d && d.items) fillSelect("migrateConfig", d.items, "id", "id");
-        }).catch(function () {});
+        }).catch(function (err) {
+          api.showError(err, "migrateMsg", "Не удалось загрузить конфигурации:");
+        });
       }
 
       function loadPerms(cid) {
@@ -103,12 +107,14 @@
         api.get("/v1/collections/" + cid + "/permissions").then(function (r) { return api.handleResponse(r); }).then(function (d) {
           var el = document.getElementById("permList");
           if (d && d.items && d.items.length > 0) {
-            el.innerHTML = "<div class='card'><table><thead><tr><th>Subject</th><th>Роль</th></tr></thead><tbody>" +
-              d.items.map(function (p) { return "<tr><td>" + p.subject + "</td><td>" + p.role + "</td></tr>"; }).join("") + "</tbody></table></div>";
+            el.innerHTML = "<div class='card'><div class='table-wrap'><table><thead><tr><th>Subject</th><th>Роль</th></tr></thead><tbody>" +
+              d.items.map(function (p) { return "<tr><td>" + p.subject + "</td><td>" + p.role + "</td></tr>"; }).join("") + "</tbody></table></div></div>";
           } else {
             el.innerHTML = "<p>Нет прав</p>";
           }
-        }).catch(function () { document.getElementById("permList").innerHTML = "<p class='error'>Нет доступа</p>"; });
+        }).catch(function (err) {
+          api.showError(err, "permList", "Не удалось загрузить права:");
+        });
       }
 
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
@@ -122,8 +128,8 @@
           .then(function (r) { return api.handleResponse(r); })
           .then(function (d) {
             document.getElementById("migrateMsg").innerHTML = "<p class='success'>Мигрировано: " + (d && d.migrated) + " документов</p>";
-          }).catch(function () {
-            document.getElementById("migrateMsg").innerHTML = "<p class='error'>Ошибка миграции</p>";
+          }).catch(function (err) {
+            api.showError(err, "migrateMsg", "Ошибка миграции:");
           });
       };
 
@@ -138,7 +144,9 @@
           .then(function () {
             loadPerms(cid);
             document.getElementById("permSubject").value = "";
-          }).catch(function () {});
+          }).catch(function (err) {
+            api.showError(err, "permList", "Ошибка назначения права:");
+          });
       };
 
       document.getElementById("formRevoke").onsubmit = function (e) {
@@ -147,9 +155,13 @@
         var subj = document.getElementById("revokeSubject").value;
         if (!cid || !subj) return;
         api.delete("/v1/collections/" + cid + "/permissions/" + encodeURIComponent(subj))
-          .then(function (r) {
-            if (r.status === 204) { loadPerms(cid); document.getElementById("revokeSubject").value = ""; }
-          }).catch(function () {});
+          .then(function (r) { return api.handleResponse(r); })
+          .then(function () {
+            loadPerms(cid);
+            document.getElementById("revokeSubject").value = "";
+          }).catch(function (err) {
+            api.showError(err, "permList", "Ошибка снятия права:");
+          });
       };
 
       document.getElementById("permColl").onchange = function () {

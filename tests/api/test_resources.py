@@ -1,9 +1,35 @@
 """API resource tests."""
 
+import json
+import re
 from uuid import uuid4
 
 import pytest
 from falcon.testing import TestClient
+
+from relrag.interfaces.api.resources.documents import _decode_filename
+
+
+class TestDecodeFilename:
+    """Tests for _decode_filename (Cyrillic and encoding fixes)."""
+
+    def test_decode_filename_none_or_empty(self) -> None:
+        assert _decode_filename(None) == ""
+        assert _decode_filename("") == ""
+        assert _decode_filename("   ") == ""
+
+    def test_decode_filename_ascii_unchanged(self) -> None:
+        assert _decode_filename("test.txt") == "test.txt"
+        assert _decode_filename("file_1") == "file_1"
+
+    def test_decode_filename_cyrillic_unchanged(self) -> None:
+        assert _decode_filename("Документ.txt") == "Документ.txt"
+        assert _decode_filename("Файл.pdf") == "Файл.pdf"
+
+    def test_decode_filename_mojibake_utf8_as_latin1(self) -> None:
+        # UTF-8 bytes for "Документ" were decoded as Latin-1
+        mojibake = bytes([0xD0, 0x94, 0xD0, 0xBE, 0xD0, 0xBA, 0xD1, 0x83, 0xD0, 0xBC, 0xD0, 0xB5, 0xD0, 0xBD, 0xD1, 0x82]).decode("latin-1")
+        assert _decode_filename(mojibake) == "Документ"
 
 
 class TestHealth:
@@ -133,6 +159,44 @@ class TestDocuments:
         assert r.status_code == 201
         assert "id" in r.json
         assert r.json["content"] == "Test document content"
+
+    def test_post_documents_stream_multipart(self, client: TestClient) -> None:
+        """POST /v1/documents/stream returns SSE progress and done events."""
+        cr = client.simulate_post(
+            "/v1/configurations",
+            json={"embedding_model": "text-embedding-3-small", "chunk_size": 512},
+        )
+        config_id = cr.json["id"]
+        coll_r = client.simulate_post(
+            "/v1/collections",
+            json={"configuration_id": config_id},
+        )
+        coll_id = coll_r.json["id"]
+        boundary = "----TestBoundary"
+        body = (
+            f"--{boundary}\r\n"
+            "Content-Disposition: form-data; name=\"collection_id\"\r\n\r\n"
+            f"{coll_id}\r\n"
+            f"--{boundary}\r\n"
+            "Content-Disposition: form-data; name=\"files\"; filename=\"test.txt\"\r\n"
+            "Content-Type: text/plain\r\n\r\n"
+            "Hello stream upload\r\n"
+            f"--{boundary}--\r\n"
+        ).encode("utf-8")
+        headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+        r = client.simulate_post("/v1/documents/stream", body=body, headers=headers)
+        assert r.status_code == 200
+        assert "text/event-stream" in (r.headers.get("content-type") or "")
+        text = r.text or ""
+        assert "event: progress" in text
+        assert "event: done" in text
+        # Parse last "done" event data (data: {...} on one line)
+        done_match = re.search(r"event: done\s*\ndata: (.+?)(?:\n|$)", text)
+        assert done_match, "expected event: done with data"
+        data = json.loads(done_match.group(1).strip())
+        assert "documents" in data
+        assert len(data["documents"]) == 1
+        assert data["documents"][0]["content"] == "Hello stream upload"
 
 
 class TestConfigurationsErrors:

@@ -86,7 +86,11 @@ def app(uow_factory, mock_permission_checker, mock_embedding_provider):
         CollectionsResource,
     )
     from relrag.interfaces.api.resources.configurations import ConfigurationsResource
-    from relrag.interfaces.api.resources.documents import DocumentResource, DocumentsResource
+    from relrag.interfaces.api.resources.documents import (
+    DocumentResource,
+    DocumentsResource,
+    DocumentsStreamResource,
+)
     from relrag.interfaces.api.resources.health import HealthResource
     from relrag.interfaces.api.resources.migrate import MigrateResource
     from relrag.interfaces.api.resources.models import ModelsResource
@@ -111,6 +115,7 @@ def app(uow_factory, mock_permission_checker, mock_embedding_provider):
         "/v1/collections/{collection_id}/permissions/{subject}",
         PermissionRevokeResource(revoke_permission),
     )
+    app.add_route("/v1/documents/stream", DocumentsStreamResource(load_document))
     app.add_route("/v1/documents", DocumentsResource(load_document))
     app.add_route("/v1/documents/{document_id}", DocumentResource(get_document))
     app.add_route("/v1/collections/{collection_id}/search", SearchResource(hybrid_search))

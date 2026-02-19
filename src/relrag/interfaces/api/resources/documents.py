@@ -1,5 +1,6 @@
 """Document API resources."""
 
+import json
 from uuid import UUID
 
 import falcon.asgi
@@ -9,6 +10,29 @@ from relrag.application.use_cases.document.get_document import GetDocumentUseCas
 from relrag.application.use_cases.document.load_document import LoadDocumentUseCase
 from relrag.domain.exceptions import NotFound, PermissionDenied, ValidationError
 from relrag.infrastructure.document_parsers import parse_file
+
+
+def _decode_filename(raw: str | None) -> str:
+    """Decode filename to UTF-8, fixing mojibake when UTF-8 bytes were read as Latin-1."""
+    if not raw or not raw.strip():
+        return ""
+    raw = raw.strip()
+    try:
+        return raw.encode("latin-1").decode("utf-8")
+    except UnicodeEncodeError:
+        return raw
+    except UnicodeDecodeError:
+        try:
+            return raw.encode("latin-1").decode("cp1251")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return raw
+    return raw
+
+
+def _sse_event(event: str, data: dict) -> bytes:
+    """Format one Server-Sent Event (event + data)."""
+    payload = json.dumps(data, ensure_ascii=False)
+    return f"event: {event}\ndata: {payload}\n\n".encode("utf-8")
 
 
 class DocumentsResource:
@@ -77,7 +101,7 @@ class DocumentsResource:
                 collection_id_str = data.decode("utf-8").strip()
             elif name in ("files", "files[]") and part.filename:
                 data = await part.get_data()
-                filename = part.secure_filename or part.filename or "file"
+                filename = _decode_filename(part.filename or part.secure_filename) or "file"
                 files.append((bytes(data), filename))
         if not collection_id_str:
             resp.status = falcon.HTTP_400
@@ -118,6 +142,143 @@ class DocumentsResource:
                 errors.append({"filename": filename, "error": str(e)})
         resp.media = {"documents": created, "errors": errors}
         resp.status = falcon.HTTP_201
+
+
+class DocumentsStreamResource:
+    """POST /v1/documents/stream - create documents from multipart, stream progress via SSE."""
+
+    def __init__(self, load_document: LoadDocumentUseCase) -> None:
+        self._load_document = load_document
+
+    async def on_post(self, req: falcon.asgi.Request, resp: falcon.asgi.Response) -> None:
+        """Create documents from multipart; respond with text/event-stream progress then done."""
+        user = getattr(req.context, "user", None)
+        if not user:
+            resp.status = falcon.HTTP_401
+            resp.media = {"error": "Unauthorized"}
+            return
+
+        content_type = req.content_type or ""
+        if "multipart/form-data" not in content_type:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "multipart/form-data required"}
+            return
+
+        try:
+            form = await req.get_media()
+        except Exception as e:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": f"Invalid multipart: {e}"}
+            return
+
+        collection_id_str: str | None = None
+        files: list[tuple[bytes, str]] = []
+        file_index = 0
+        async for part in form:
+            name = (part.name or "").strip()
+            if name == "collection_id":
+                data = await part.get_data()
+                collection_id_str = data.decode("utf-8").strip()
+            elif name in ("files", "files[]"):
+                data = await part.get_data()
+                if not data:
+                    continue
+                file_index += 1
+                raw_name = (part.filename or part.secure_filename or "").strip()
+                filename = _decode_filename(raw_name) if raw_name else f"file_{file_index}"
+                files.append((bytes(data), filename))
+
+        if not collection_id_str:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "collection_id required"}
+            return
+        if not files:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "At least one file required"}
+            return
+        try:
+            collection_id = UUID(collection_id_str)
+        except ValueError:
+            resp.status = falcon.HTTP_400
+            resp.media = {"error": "Invalid collection_id"}
+            return
+
+        resp.status = falcon.HTTP_200
+        resp.content_type = "text/event-stream"
+        resp.cache_control = ["no-store"]
+        resp.stream = self._stream_upload_events(user.user_id, collection_id, files)
+
+    async def _stream_upload_events(
+        self, user_id: str, collection_id: UUID, files: list[tuple[bytes, str]]
+    ):
+        """Async generator yielding SSE events: progress (per file) then done."""
+        total = len(files)
+        created: list[dict] = []
+        errors: list[dict] = []
+
+        for index, (data, filename) in enumerate(files):
+            yield _sse_event(
+                "progress",
+                {
+                    "total": total,
+                    "current": index + 1,
+                    "filename": filename,
+                    "status": "processing",
+                },
+            )
+            try:
+                parsed = parse_file(data, filename=filename, content_type=None)
+                props = {k: (v[0], v[1].value) for k, v in parsed.properties.items()}
+                out = await self._load_document.execute(
+                    user_id,
+                    DocumentCreateInput(
+                        collection_id=collection_id,
+                        content=parsed.text or " ",
+                        properties=props,
+                    ),
+                )
+                created.append(_document_to_dict(out))
+                yield _sse_event(
+                    "progress",
+                    {
+                        "total": total,
+                        "current": index + 1,
+                        "filename": filename,
+                        "status": "ok",
+                    },
+                )
+            except PermissionDenied:
+                yield _sse_event(
+                    "error",
+                    {"message": "Permission denied", "filename": filename},
+                )
+                return
+            except ValueError as e:
+                errors.append({"filename": filename, "error": str(e)})
+                yield _sse_event(
+                    "progress",
+                    {
+                        "total": total,
+                        "current": index + 1,
+                        "filename": filename,
+                        "status": "error",
+                        "error": str(e),
+                    },
+                )
+            except ValidationError as e:
+                errors.append({"filename": filename, "error": str(e)})
+                yield _sse_event(
+                    "progress",
+                    {
+                        "total": total,
+                        "current": index + 1,
+                        "filename": filename,
+                        "status": "error",
+                        "error": str(e),
+                    },
+                )
+
+        yield _sse_event("done", {"documents": created, "errors": errors})
 
 
 class DocumentResource:
