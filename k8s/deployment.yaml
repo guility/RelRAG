@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relrag-api
+  namespace: relrag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: relrag-api
+  template:
+    metadata:
+      labels:
+        app: relrag-api
+    spec:
+      containers:
+        - name: relrag-api
+          image: relrag:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: relrag-secrets
+                  key: database-url
+            - name: EMBEDDING_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: relrag-secrets
+                  key: embedding-api-key
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /v1/health/ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
