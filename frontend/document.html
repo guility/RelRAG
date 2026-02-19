@@ -2,23 +2,33 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RelRAG — Загрузка документа</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
 </head>
 <body>
   <header>
     <h1>RelRAG</h1>
-    <nav>
+    <nav class="flex gap-1">
       <a href="index.html">Главная</a>
       <a href="configurations.html">Конфигурации</a>
       <a href="collections.html">Коллекции</a>
       <a href="document.html">Документ</a>
+      <button type="button" id="btnTheme" aria-label="Тема"></button>
       <button type="button" id="btnLogout">Выход</button>
     </nav>
   </header>
 
   <main>
     <h2>Загрузить документ</h2>
+    <div class="hint">
+      <strong>Загрузка текста</strong>
+      <p>Выберите коллекцию и вставьте текст. Документ будет разбит на чанки, преобразован в эмбеддинги и сохранён для семантического поиска.</p>
+    </div>
     <form id="formDoc">
       <label>Коллекция <select id="collId" required></select></label>
       <label>Текст <textarea id="docContent" rows="10" required></textarea></label>
@@ -27,6 +37,7 @@
     <div id="msg"></div>
   </main>
 
+  <script src="js/layout.js"></script>
   <script src="vendor/keycloak.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
@@ -74,7 +85,7 @@
 
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();
-        else loadCollections();
+        else auth.updateToken(30).then(loadCollections).catch(function () { auth.login(); });
       }).catch(function () { auth.login(); });
     })();
   </script>

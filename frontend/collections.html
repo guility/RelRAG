@@ -2,23 +2,37 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RelRAG — Коллекции</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
 </head>
 <body>
   <header>
     <h1>RelRAG</h1>
-    <nav>
+    <nav class="flex gap-1">
       <a href="index.html">Главная</a>
       <a href="configurations.html">Конфигурации</a>
       <a href="collections.html">Коллекции</a>
       <a href="document.html">Документ</a>
+      <button type="button" id="btnTheme" aria-label="Тема"></button>
       <button type="button" id="btnLogout">Выход</button>
     </nav>
   </header>
 
   <main>
     <h2>Коллекции</h2>
+    <div id="hintNoConfig" class="hint" style="display:none">
+      <strong>Как создать первую коллекцию</strong>
+      <ol>
+        <li>Сначала создайте <a href="configurations.html">конфигурацию</a> (модель эмбеддингов, размер чанка).</li>
+        <li>Затем выберите её здесь и нажмите «Создать».</li>
+        <li>После создания загрузите документы через <a href="document.html">Документ</a>.</li>
+      </ol>
+    </div>
     <form id="formCreate">
       <label>Конфигурация <select id="configId" name="configuration_id" required></select></label>
       <button type="submit">Создать</button>
@@ -26,6 +40,7 @@
     <div id="list"></div>
   </main>
 
+  <script src="js/layout.js"></script>
   <script src="vendor/keycloak.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
@@ -40,11 +55,15 @@
           return api.handleResponse(res);
         }).then(function (data) {
           const sel = document.getElementById("configId");
+          const hint = document.getElementById("hintNoConfig");
           sel.innerHTML = "<option value=''>Выберите конфигурацию</option>";
-          if (data && data.items) {
+          if (data && data.items && data.items.length > 0) {
+            if (hint) hint.style.display = "none";
             data.items.forEach(function (c) {
               sel.innerHTML += "<option value='" + c.id + "'>" + c.id + " (" + c.embedding_model + ")</option>";
             });
+          } else {
+            if (hint) hint.style.display = "block";
           }
         }).catch(function () {});
       }
@@ -55,11 +74,11 @@
         }).then(function (data) {
           const el = document.getElementById("list");
           if (data && data.items && data.items.length > 0) {
-            el.innerHTML = "<table><thead><tr><th>ID</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
+            el.innerHTML = "<div class='card'><table><thead><tr><th>ID</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
               data.items.map(function (c) {
                 return "<tr><td>" + c.id + "</td><td>" + c.configuration_id + "</td><td>" + c.created_at + "</td>" +
                   "<td><a href='collection.html?id=" + c.id + "'>Открыть</a></td></tr>";
-              }).join("") + "</tbody></table>";
+              }).join("") + "</tbody></table></div>";
           } else {
             el.innerHTML = "<p>Нет коллекций</p>";
           }
@@ -81,12 +100,13 @@
         }).catch(function () {});
       };
 
+      function runWhenReady() {
+        loadConfigs();
+        loadList();
+      }
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();
-        else {
-          loadConfigs();
-          loadList();
-        }
+        else auth.updateToken(30).then(runWhenReady).catch(function () { auth.login(); });
       }).catch(function () { auth.login(); });
     })();
   </script>

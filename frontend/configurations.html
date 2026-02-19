@@ -2,36 +2,46 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RelRAG — Конфигурации</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
 </head>
 <body>
   <header>
     <h1>RelRAG</h1>
-    <nav>
+    <nav class="flex gap-1">
       <a href="index.html">Главная</a>
       <a href="configurations.html">Конфигурации</a>
       <a href="collections.html">Коллекции</a>
       <a href="document.html">Документ</a>
+      <button type="button" id="btnTheme" aria-label="Тема"></button>
       <button type="button" id="btnLogout">Выход</button>
     </nav>
   </header>
 
   <main>
     <h2>Конфигурации</h2>
+    <div class="hint">
+      <strong>Создание конфигурации</strong>
+      <p>Конфигурация задаёт модель эмбеддингов и параметры чанкинга. Размерность векторов определяется выбранной моделью автоматически.</p>
+    </div>
     <form id="formCreate">
       <label>Стратегия чанкинга <select id="chunking" name="chunking_strategy">
         <option value="recursive">recursive</option>
       </select></label>
-      <label>Модель эмбеддингов <input type="text" name="embedding_model" value="text-embedding-3-small"></label>
-      <label>Размерность <input type="number" name="embedding_dimensions" value="1536"></label>
-      <label>Размер чанка <input type="number" name="chunk_size" value="512"></label>
-      <label>Перекрытие <input type="number" name="chunk_overlap" value="50"></label>
+      <label>Модель эмбеддингов <select id="embeddingModel" name="embedding_model" required></select></label>
+      <label>Размер чанка <input type="number" name="chunk_size" value="512" min="64" max="8192"></label>
+      <label>Перекрытие <input type="number" name="chunk_overlap" value="50" min="0" max="512"></label>
       <button type="submit">Создать</button>
     </form>
     <div id="list"></div>
   </main>
 
+  <script src="js/layout.js"></script>
   <script src="vendor/keycloak.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
@@ -41,16 +51,33 @@
       const api = window.relragApi;
       const auth = window.relragAuth;
 
+      function loadModels() {
+        return api.get("/v1/models").then(function (res) {
+          return api.handleResponse(res);
+        }).then(function (data) {
+          const sel = document.getElementById("embeddingModel");
+          sel.innerHTML = "<option value=''>Выберите модель</option>";
+          if (data && data.items && data.items.length > 0) {
+            data.items.forEach(function (m) {
+              sel.innerHTML += "<option value='" + m.id + "'>" + m.id + " (" + m.dimensions + "d)</option>";
+            });
+          }
+        }).catch(function () {
+          var sel = document.getElementById("embeddingModel");
+          sel.innerHTML = "<option value=''>Нет моделей</option><option value='text-embedding-3-small'>text-embedding-3-small (1536d)</option><option value='evraz-gte-qwen2-embed'>evraz-gte-qwen2-embed (1024d)</option>";
+        });
+      }
+
       function loadList() {
         api.get("/v1/configurations").then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           const el = document.getElementById("list");
           if (data && data.items && data.items.length > 0) {
-            el.innerHTML = "<table><thead><tr><th>ID</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
+            el.innerHTML = "<div class='card'><table><thead><tr><th>ID</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
               data.items.map(function (c) {
                 return "<tr><td>" + c.id + "</td><td>" + c.embedding_model + "</td><td>" + c.chunk_size + "</td><td>" + c.chunk_overlap + "</td></tr>";
-              }).join("") + "</tbody></table>";
+              }).join("") + "</tbody></table></div>";
           } else {
             el.innerHTML = "<p>Нет конфигураций</p>";
           }
@@ -65,7 +92,6 @@
         const body = {
           chunking_strategy: form.chunking_strategy.value,
           embedding_model: form.embedding_model.value,
-          embedding_dimensions: parseInt(form.embedding_dimensions.value, 10),
           chunk_size: parseInt(form.chunk_size.value, 10),
           chunk_overlap: parseInt(form.chunk_overlap.value, 10),
         };
@@ -75,13 +101,14 @@
           if (data && data.id) {
             loadList();
             form.reset();
+            document.getElementById("embeddingModel").value = "";
           }
         }).catch(function () {});
       };
 
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();
-        else loadList();
+        else auth.updateToken(30).then(loadModels).then(loadList).catch(function () { auth.login(); });
       }).catch(function () { auth.login(); });
     })();
   </script>

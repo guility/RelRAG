@@ -2,17 +2,23 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RelRAG — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
 </head>
 <body>
   <header>
     <h1>RelRAG</h1>
-    <nav>
+    <nav class="flex gap-1">
       <a href="index.html">Главная</a>
       <a href="configurations.html">Конфигурации</a>
       <a href="collections.html">Коллекции</a>
       <a href="document.html">Документ</a>
+      <button type="button" id="btnTheme" aria-label="Тема"></button>
       <button type="button" id="btnLogout">Выход</button>
     </nav>
   </header>
@@ -20,7 +26,23 @@
   <main>
     <h2>Коллекции</h2>
     <div id="collections"></div>
+    <div id="hintFirstCollection" class="hint" style="display:none">
+      <strong>Как создать первую коллекцию</strong>
+      <ol>
+        <li>Перейдите в <a href="configurations.html">Конфигурации</a> и создайте конфигурацию (модель эмбеддингов, размер чанка).</li>
+        <li>Перейдите в <a href="collections.html">Коллекции</a> и создайте коллекцию, выбрав конфигурацию.</li>
+        <li>Загрузите документы через <a href="document.html">Документ</a> или на странице коллекции.</li>
+      </ol>
+    </div>
     <h3>Поиск</h3>
+    <div id="hintFirstSearch" class="hint" style="display:none">
+      <strong>Как выполнить первый поиск</strong>
+      <ol>
+        <li>Выберите коллекцию из списка.</li>
+        <li>Введите запрос (например, ключевые слова из загруженных документов).</li>
+        <li>Нажмите «Искать» — результаты покажут релевантные фрагменты с оценкой.</li>
+      </ol>
+    </div>
     <form id="formSearch">
       <label>Коллекция <select id="searchCollection" required></select></label>
       <label>Запрос <input type="text" id="searchQuery" placeholder="текст для поиска" required></label>
@@ -29,6 +51,7 @@
     <div id="searchResults"></div>
   </main>
 
+  <script src="js/layout.js"></script>
   <script src="vendor/keycloak.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
@@ -40,15 +63,21 @@
 
       function renderCollections(items) {
         const el = document.getElementById("collections");
+        const hintColl = document.getElementById("hintFirstCollection");
+        const hintSearch = document.getElementById("hintFirstSearch");
         if (!items || items.length === 0) {
           el.innerHTML = "<p>Нет коллекций. <a href='collections.html'>Создать</a></p>";
+          if (hintColl) hintColl.style.display = "block";
+          if (hintSearch) hintSearch.style.display = "none";
           return;
         }
-        el.innerHTML = "<table><thead><tr><th>ID</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
+        if (hintColl) hintColl.style.display = "none";
+        if (hintSearch) hintSearch.style.display = "block";
+        el.innerHTML = "<div class='card'><table><thead><tr><th>ID</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
           items.map(function (c) {
             return "<tr><td>" + c.id + "</td><td>" + c.configuration_id + "</td><td>" + c.created_at + "</td>" +
               "<td><a href='collection.html?id=" + c.id + "'>Открыть</a> | <a href='admin.html?collection=" + c.id + "'>Админ</a></td></tr>";
-          }).join("") + "</tbody></table>";
+          }).join("") + "</tbody></table></div>";
       }
 
       function loadCollections() {
@@ -78,8 +107,8 @@
           .then(function (data) {
             const el = document.getElementById("searchResults");
             if (data && data.results && data.results.length > 0) {
-              el.innerHTML = "<ul>" + data.results.map(function (r) {
-                return "<li>" + (r.content || "").substring(0, 200) + " (score: " + r.score + ")</li>";
+              el.innerHTML = "<ul class='search-results'>" + data.results.map(function (r) {
+                return "<li>" + (r.content || "").substring(0, 200) + " <small>(score: " + r.score + ")</small></li>";
               }).join("") + "</ul>";
             } else {
               el.innerHTML = "<p>Ничего не найдено</p>";
@@ -91,7 +120,7 @@
 
       auth.init().then(function (authenticated) {
         if (!authenticated) auth.login();
-        else loadCollections();
+        else auth.updateToken(30).then(loadCollections).catch(function () { auth.login(); });
       }).catch(function () { auth.login(); });
     })();
   </script>

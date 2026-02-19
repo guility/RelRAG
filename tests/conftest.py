@@ -211,15 +211,43 @@ class FakeChunkRepository:
 class FakeConfigurationRepository:
     """In-memory configuration repository."""
 
-    def __init__(self) -> None:
+    def __init__(self, collections_repo: "FakeCollectionRepository | None" = None) -> None:
         self._by_id: dict[UUID, Configuration] = {}
         self._by_collection: dict[UUID, Configuration] = {}
+        self._collections_repo = collections_repo
 
     async def get_by_id(self, configuration_id: UUID) -> Configuration | None:
         return self._by_id.get(configuration_id)
 
     async def get_by_collection_id(self, collection_id: UUID) -> Configuration | None:
-        return self._by_collection.get(collection_id)
+        if collection_id in self._by_collection:
+            return self._by_collection[collection_id]
+        if self._collections_repo:
+            coll = await self._collections_repo.get_by_id(collection_id)
+            if coll:
+                return self._by_id.get(coll.configuration_id)
+        return None
+
+    async def list(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> tuple[list[Configuration], str | None]:
+        items = sorted(self._by_id.values(), key=lambda c: c.id)
+        start = 0
+        if cursor:
+            try:
+                cursor_uuid = UUID(cursor)
+                for i, c in enumerate(items):
+                    if c.id > cursor_uuid:
+                        start = i
+                        break
+            except ValueError:
+                pass
+        page = items[start : start + limit + 1]
+        next_cursor = str(page[limit].id) if len(page) > limit else None
+        return (page[:limit], next_cursor)
 
     async def create(self, configuration: Configuration) -> Configuration:
         self._by_id[configuration.id] = configuration
@@ -357,6 +385,13 @@ class FakeRoleRepository:
         return list(self._by_id.values())
 
     async def get_actions_for_role(self, role_id: UUID) -> list[str]:
+        role = self._by_id.get(role_id)
+        if role and role.name == "admin":
+            return ["read", "write", "admin", "migrate"]
+        if role and role.name == "editor":
+            return ["read", "write"]
+        if role and role.name == "viewer":
+            return ["read"]
         return []
 
     def add_role(self, role: Role) -> None:
@@ -392,7 +427,9 @@ class FakeUnitOfWork:
         self.packs = FakePackRepository()
         self.chunks = FakeChunkRepository()
         self.collections = FakeCollectionRepository()
-        self.configurations = FakeConfigurationRepository()
+        self.configurations = FakeConfigurationRepository(
+            collections_repo=self.collections
+        )
         self.permissions = FakePermissionRepository()
         self.roles = FakeRoleRepository()
         self.properties = FakePropertyRepository()

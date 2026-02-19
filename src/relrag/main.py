@@ -26,6 +26,7 @@ from relrag.interfaces.api.middleware.cors import CORSMiddleware
 from relrag.interfaces.api.middleware.pool_lifespan import PoolLifespanMiddleware
 from relrag.interfaces.api.resources.collections import CollectionResource, CollectionsResource
 from relrag.interfaces.api.resources.configurations import ConfigurationsResource
+from relrag.interfaces.api.resources.models import ModelsResource
 from relrag.interfaces.api.resources.documents import DocumentResource, DocumentsResource
 from relrag.interfaces.api.resources.health import HealthResource
 from relrag.interfaces.api.resources.migrate import MigrateResource
@@ -109,13 +110,13 @@ def create_relrag_app():
     )
     permission_revoke_resource = PermissionRevokeResource(revoke_permission)
     configurations_resource = ConfigurationsResource(uow_factory)
+    models_resource = ModelsResource()
     search_resource = SearchResource(hybrid_search)
     health_resource = HealthResource()
 
-    cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     app = falcon.asgi.App(
         middleware=[
-            CORSMiddleware(cors_origins),
+            CORSMiddleware(),
             PoolLifespanMiddleware(pool),
             AuthMiddleware(keycloak),
         ],
@@ -130,6 +131,7 @@ def create_relrag_app():
     app.add_error_handler(Exception, log_exception)
     app.add_route("/v1/health", health_resource)
     app.add_route("/v1/health/ready", health_resource, suffix="ready")
+    app.add_route("/v1/models", models_resource)
     app.add_route("/v1/documents", documents_resource)
     app.add_route("/v1/documents/{document_id}", document_resource)
     app.add_route("/v1/collections", collections_resource)

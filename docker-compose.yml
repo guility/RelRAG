@@ -12,7 +12,7 @@ services:
       # Переопределения для Docker-сети (остальное из env_file)
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/relrag
       KEYCLOAK_URL: http://keycloak:8080
-      CORS_ORIGINS: http://localhost:8081,http://relrag-app:8081
+      CORS_ORIGINS: http://localhost:8081,http://127.0.0.1:8081,http://relrag-app:8081
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,6 +31,8 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      # Единый issuer для токенов (браузер с localhost, API в Docker — один и тот же issuer)
+      KC_HOSTNAME: localhost
     ports:
       - "8080:8080"
     volumes:

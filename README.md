@@ -34,6 +34,17 @@ docker compose up -d
 
 После `docker compose up -d` фронтенд доступен на http://localhost:8081. Вход через Keycloak (testuser/testpass). Локальная разработка: `python -m http.server 8081` в папке `frontend/` (предварительно задать `RELRAG_CONFIG` в index.html или config.js для API и Keycloak).
 
+## Testing
+
+```bash
+# Unit and API tests (no Docker required)
+pytest tests/ -m "not e2e" -v --cov=src/relrag
+
+# E2E frontend tests (requires docker compose up + playwright install)
+playwright install
+pytest tests/e2e/ -v -m e2e
+```
+
 ## Documentation
 
 See [docs/TASKS.md](docs/TASKS.md) for development tasks and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.

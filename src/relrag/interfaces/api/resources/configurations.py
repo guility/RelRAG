@@ -6,6 +6,7 @@ import falcon.asgi
 
 from relrag.domain.entities import Configuration
 from relrag.domain.value_objects import ChunkingStrategy
+from relrag.interfaces.api.resources.models import DEFAULT_MODEL_DIMENSIONS
 
 
 class ConfigurationsResource:
@@ -48,7 +49,12 @@ class ConfigurationsResource:
             body = await req.get_media()
             chunking_strategy = ChunkingStrategy(body.get("chunking_strategy", "recursive"))
             embedding_model = body.get("embedding_model", "text-embedding-3-small")
-            embedding_dimensions = body.get("embedding_dimensions", 1536)
+            dim_raw = body.get("embedding_dimensions")
+            embedding_dimensions = (
+                int(dim_raw)
+                if dim_raw is not None
+                else DEFAULT_MODEL_DIMENSIONS.get(embedding_model, 1536)
+            )
             chunk_size = body.get("chunk_size", 512)
             chunk_overlap = body.get("chunk_overlap", 50)
         except (KeyError, ValueError) as e:

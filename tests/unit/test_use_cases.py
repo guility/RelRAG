@@ -10,13 +10,29 @@ from relrag.application.dto.document_dto import DocumentCreateInput
 from relrag.application.use_cases.collection.create_collection import (
     CreateCollectionUseCase,
 )
+from relrag.application.use_cases.collection.migrate_collection import (
+    MigrateCollectionUseCase,
+)
 from relrag.application.use_cases.document.get_document import GetDocumentUseCase
 from relrag.application.use_cases.document.load_document import LoadDocumentUseCase
+from relrag.application.use_cases.permission.assign_permission import (
+    AssignPermissionUseCase,
+)
+from relrag.application.use_cases.permission.revoke_permission import (
+    RevokePermissionUseCase,
+)
 from relrag.application.use_cases.search.hybrid_search import (
     HybridSearchInput,
     HybridSearchUseCase,
 )
-from relrag.domain.entities import Configuration, Document, Pack, Role
+from relrag.domain.entities import (
+    Collection,
+    Configuration,
+    Document,
+    Pack,
+    Permission,
+    Role,
+)
 from relrag.domain.exceptions import NotFound, PermissionDenied
 from relrag.domain.value_objects import ChunkingStrategy
 from relrag.infrastructure.chunking.recursive_chunker import RecursiveChunker
@@ -436,3 +452,295 @@ async def test_hybrid_search_success(
     assert results[0].pack_id == pack_id
     assert results[0].content == "found content"
     assert results[0].score == 0.88
+
+
+# --- MigrateCollectionUseCase ---
+
+
+def _migrate_uow_factory(collection_id, new_config_id, packs_with_docs):
+    """Build UoW with collection, configs, packs, documents for migrate."""
+    now = datetime.now(UTC)
+    coll = Collection(
+        id=collection_id,
+        configuration_id=uuid4(),  # old config
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    new_config = Configuration(
+        id=new_config_id,
+        chunking_strategy=ChunkingStrategy.RECURSIVE,
+        embedding_model="text-embedding-3-small",
+        embedding_dimensions=1536,
+        chunk_size=50,
+        chunk_overlap=10,
+    )
+
+    @asynccontextmanager
+    async def factory():
+        uow = FakeUnitOfWork()
+        uow.collections._by_id[collection_id] = coll
+        uow.configurations._by_id[new_config_id] = new_config
+        for doc, pack in packs_with_docs:
+            await uow.documents.create(doc)
+            await uow.packs.create(pack)
+            await uow.packs.add_to_collection(pack.id, collection_id)
+        yield uow
+
+    return factory
+
+
+@pytest.mark.asyncio
+async def test_migrate_collection_permission_denied(
+    mock_embedding_provider,
+) -> None:
+    """MigrateCollectionUseCase raises PermissionDenied when user has no migrate access."""
+    from unittest.mock import AsyncMock
+
+    coll_id = uuid4()
+    config_id = uuid4()
+    now = datetime.now(UTC)
+    doc = Document(
+        id=uuid4(),
+        content="x",
+        source_hash=b"a" * 16,
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    pack = Pack(
+        id=uuid4(),
+        document_id=doc.id,
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    factory = _migrate_uow_factory(coll_id, config_id, [(doc, pack)])
+    perm_checker = AsyncMock()
+    perm_checker.check.return_value = False
+
+    use_case = MigrateCollectionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=perm_checker,
+        chunker=RecursiveChunker(),
+        embedding_provider=mock_embedding_provider,
+    )
+
+    with pytest.raises(PermissionDenied, match="migrate"):
+        await use_case.execute("user-1", coll_id, config_id)
+
+
+@pytest.mark.asyncio
+async def test_migrate_collection_success(
+    mock_permission_checker,
+    mock_embedding_provider,
+) -> None:
+    """MigrateCollectionUseCase re-chunks and re-embeds documents."""
+    coll_id = uuid4()
+    config_id = uuid4()
+    now = datetime.now(UTC)
+    doc = Document(
+        id=uuid4(),
+        content="Hello world test content for chunking.",
+        source_hash=b"a" * 16,
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    pack = Pack(
+        id=uuid4(),
+        document_id=doc.id,
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    factory = _migrate_uow_factory(coll_id, config_id, [(doc, pack)])
+
+    use_case = MigrateCollectionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=mock_permission_checker,
+        chunker=RecursiveChunker(),
+        embedding_provider=mock_embedding_provider,
+    )
+
+    count = await use_case.execute("user-1", coll_id, config_id)
+
+    assert count == 1
+
+
+# --- AssignPermissionUseCase ---
+
+
+def _assign_permission_uow_factory(collection_id, has_role=True, has_existing=False):
+    """Build UoW for AssignPermissionUseCase."""
+    admin_role = Role(id=uuid4(), name="admin", description="Admin")
+    viewer_role = Role(id=uuid4(), name="viewer", description="Viewer")
+
+    @asynccontextmanager
+    async def factory():
+        uow = FakeUnitOfWork()
+        if has_role:
+            uow.roles.add_role(admin_role)
+            uow.roles.add_role(viewer_role)
+        if has_existing:
+            perm = Permission(
+                id=uuid4(),
+                collection_id=collection_id,
+                subject="user-2",
+                role_id=viewer_role.id,
+                created_at=datetime.now(UTC),
+            )
+            await uow.permissions.create(perm)
+        yield uow
+
+    return factory, admin_role, viewer_role
+
+
+@pytest.mark.asyncio
+async def test_assign_permission_denied() -> None:
+    """AssignPermissionUseCase raises PermissionDenied when actor has no admin."""
+    from unittest.mock import AsyncMock
+
+    coll_id = uuid4()
+    factory, _, _ = _assign_permission_uow_factory(coll_id)
+    perm_checker = AsyncMock()
+    perm_checker.check.return_value = False
+
+    use_case = AssignPermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=perm_checker,
+    )
+
+    with pytest.raises(PermissionDenied, match="admin"):
+        await use_case.execute("actor", coll_id, "user-2", "viewer")
+
+
+@pytest.mark.asyncio
+async def test_assign_permission_role_not_found(
+    mock_permission_checker,
+) -> None:
+    """AssignPermissionUseCase raises NotFound when role does not exist."""
+    coll_id = uuid4()
+    factory, _, _ = _assign_permission_uow_factory(coll_id)
+
+    use_case = AssignPermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=mock_permission_checker,
+    )
+
+    with pytest.raises(NotFound, match="Role"):
+        await use_case.execute("actor", coll_id, "user-2", "nonexistent")
+
+
+@pytest.mark.asyncio
+async def test_assign_permission_success(
+    mock_permission_checker,
+) -> None:
+    """AssignPermissionUseCase creates new permission."""
+    coll_id = uuid4()
+    factory, _, viewer_role = _assign_permission_uow_factory(coll_id)
+
+    use_case = AssignPermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=mock_permission_checker,
+    )
+
+    result = await use_case.execute("actor", coll_id, "user-2", "viewer")
+
+    assert result.collection_id == coll_id
+    assert result.subject == "user-2"
+    assert result.role_id == viewer_role.id
+
+
+@pytest.mark.asyncio
+async def test_assign_permission_update_existing(
+    mock_permission_checker,
+) -> None:
+    """AssignPermissionUseCase updates existing permission."""
+    coll_id = uuid4()
+    factory, _, viewer_role = _assign_permission_uow_factory(
+        coll_id, has_existing=True
+    )
+
+    use_case = AssignPermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=mock_permission_checker,
+    )
+
+    result = await use_case.execute("actor", coll_id, "user-2", "admin")
+
+    assert result.subject == "user-2"
+
+
+# --- RevokePermissionUseCase ---
+
+
+def _revoke_permission_uow_factory(collection_id, has_permission=True):
+    """Build UoW for RevokePermissionUseCase."""
+    @asynccontextmanager
+    async def factory():
+        uow = FakeUnitOfWork()
+        if has_permission:
+            perm = Permission(
+                id=uuid4(),
+                collection_id=collection_id,
+                subject="user-2",
+                role_id=uuid4(),
+                created_at=datetime.now(UTC),
+            )
+            await uow.permissions.create(perm)
+        yield uow
+
+    return factory
+
+
+@pytest.mark.asyncio
+async def test_revoke_permission_denied() -> None:
+    """RevokePermissionUseCase raises PermissionDenied when actor has no admin."""
+    from unittest.mock import AsyncMock
+
+    coll_id = uuid4()
+    factory = _revoke_permission_uow_factory(coll_id)
+    perm_checker = AsyncMock()
+    perm_checker.check.return_value = False
+
+    use_case = RevokePermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=perm_checker,
+    )
+
+    with pytest.raises(PermissionDenied, match="admin"):
+        await use_case.execute("actor", coll_id, "user-2")
+
+
+@pytest.mark.asyncio
+async def test_revoke_permission_not_found(
+    mock_permission_checker,
+) -> None:
+    """RevokePermissionUseCase raises NotFound when permission does not exist."""
+    coll_id = uuid4()
+    factory = _revoke_permission_uow_factory(coll_id, has_permission=False)
+
+    use_case = RevokePermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=mock_permission_checker,
+    )
+
+    with pytest.raises(NotFound, match="Permission"):
+        await use_case.execute("actor", coll_id, "user-2")
+
+
+@pytest.mark.asyncio
+async def test_revoke_permission_success(
+    mock_permission_checker,
+) -> None:
+    """RevokePermissionUseCase deletes permission."""
+    coll_id = uuid4()
+    factory = _revoke_permission_uow_factory(coll_id)
+
+    use_case = RevokePermissionUseCase(
+        unit_of_work_factory=factory,
+        permission_checker=mock_permission_checker,
+    )
+
+    await use_case.execute("actor", coll_id, "user-2")

@@ -20,13 +20,18 @@
         keycloak
           .init({ onLoad: "check-sso", checkLoginIframe: false })
           .then(function (authenticated) {
+            window.relragAuth._loginRedirecting = false;
             resolve(authenticated);
           })
-          .catch(reject);
+          .catch(function (err) {
+            window.relragAuth._loginRedirecting = false;
+            reject(err);
+          });
       });
     },
 
     login: function () {
+      window.relragAuth._loginRedirecting = true;
       if (keycloak) keycloak.login();
     },
 
