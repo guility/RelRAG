@@ -66,8 +66,13 @@ class SearchResource:
                     {
                         "chunk_id": str(r.chunk_id),
                         "pack_id": str(r.pack_id),
+                        "document_id": str(r.document_id),
                         "content": r.content,
-                        "score": r.score,
+                        "vector_score": round(r.vector_score, 6),
+                        "fts_score": round(r.fts_score, 6),
+                        "score": round(r.score, 6),
+                        "document_title": r.document_title,
+                        "metadata": r.metadata,
                     }
                     for r in results
                 ],

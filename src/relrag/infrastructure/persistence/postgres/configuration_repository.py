@@ -18,7 +18,7 @@ class PostgresConfigurationRepository:
         """Get configuration by id."""
         cur = await self._conn.execute(
             "SELECT id, chunking_strategy, embedding_model, embedding_dimensions, "
-            "chunk_size, chunk_overlap FROM configuration WHERE id = %s",
+            "chunk_size, chunk_overlap, name FROM configuration WHERE id = %s",
             (configuration_id,),
         )
         r = await cur.fetchone()
@@ -31,6 +31,7 @@ class PostgresConfigurationRepository:
             embedding_dimensions=r[3],
             chunk_size=r[4],
             chunk_overlap=r[5],
+            name=r[6],
         )
 
     async def list(
@@ -49,7 +50,7 @@ class PostgresConfigurationRepository:
         params = tuple(_params) + (limit + 1,)
         q = (
             "SELECT id, chunking_strategy, embedding_model, embedding_dimensions, "
-            f"chunk_size, chunk_overlap FROM configuration{where} ORDER BY id LIMIT %s"
+            f"chunk_size, chunk_overlap, name FROM configuration{where} ORDER BY id LIMIT %s"
         )
         cur = await self._conn.execute(q, params)
         rows = await cur.fetchall()
@@ -61,6 +62,7 @@ class PostgresConfigurationRepository:
                 embedding_dimensions=r[3],
                 chunk_size=r[4],
                 chunk_overlap=r[5],
+                name=r[6],
             )
             for r in rows[:limit]
         ]
@@ -71,7 +73,7 @@ class PostgresConfigurationRepository:
         """Get configuration for collection."""
         cur = await self._conn.execute(
             "SELECT c.id, c.chunking_strategy, c.embedding_model, c.embedding_dimensions, "
-            "c.chunk_size, c.chunk_overlap FROM configuration c "
+            "c.chunk_size, c.chunk_overlap, c.name FROM configuration c "
             "JOIN collection col ON col.configuration_id = c.id WHERE col.id = %s",
             (collection_id,),
         )
@@ -85,14 +87,15 @@ class PostgresConfigurationRepository:
             embedding_dimensions=r[3],
             chunk_size=r[4],
             chunk_overlap=r[5],
+            name=r[6],
         )
 
     async def create(self, configuration: Configuration) -> Configuration:
         """Create configuration."""
         await self._conn.execute(
             "INSERT INTO configuration (id, chunking_strategy, embedding_model, "
-            "embedding_dimensions, chunk_size, chunk_overlap) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
+            "embedding_dimensions, chunk_size, chunk_overlap, name) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (
                 configuration.id,
                 configuration.chunking_strategy.value,
@@ -100,6 +103,7 @@ class PostgresConfigurationRepository:
                 configuration.embedding_dimensions,
                 configuration.chunk_size,
                 configuration.chunk_overlap,
+                configuration.name,
             ),
         )
         return configuration

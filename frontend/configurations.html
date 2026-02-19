@@ -30,6 +30,7 @@
       <p>Конфигурация задаёт модель эмбеддингов и параметры чанкинга. Размерность векторов определяется выбранной моделью автоматически.</p>
     </div>
     <form id="formCreate">
+      <label>Название <input type="text" name="name" placeholder="Например: Основная конфигурация" maxlength="255"></label>
       <label>Стратегия чанкинга <select id="chunking" name="chunking_strategy">
         <option value="recursive">recursive</option>
       </select></label>
@@ -74,9 +75,10 @@
         }).then(function (data) {
           const el = document.getElementById("list");
           if (data && data.items && data.items.length > 0) {
-            el.innerHTML = "<div class='card'><table><thead><tr><th>ID</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
+            el.innerHTML = "<div class='card'><table><thead><tr><th>Название</th><th>Модель</th><th>Чанк</th><th>Перекрытие</th></tr></thead><tbody>" +
               data.items.map(function (c) {
-                return "<tr><td>" + c.id + "</td><td>" + c.embedding_model + "</td><td>" + c.chunk_size + "</td><td>" + c.chunk_overlap + "</td></tr>";
+                var name = (c.name && c.name.trim()) ? c.name : c.id;
+                return "<tr><td>" + escapeHtml(name) + "</td><td>" + escapeHtml(c.embedding_model) + "</td><td>" + c.chunk_size + "</td><td>" + c.chunk_overlap + "</td></tr>";
               }).join("") + "</tbody></table></div>";
           } else {
             el.innerHTML = "<p>Нет конфигураций</p>";
@@ -86,10 +88,13 @@
 
       document.getElementById("btnLogout").onclick = function () { auth.logout(); };
 
+      function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
       document.getElementById("formCreate").onsubmit = function (e) {
         e.preventDefault();
         const form = e.target;
+        const nameVal = (form.name && form.name.value || "").trim();
         const body = {
+          name: nameVal || undefined,
           chunking_strategy: form.chunking_strategy.value,
           embedding_model: form.embedding_model.value,
           chunk_size: parseInt(form.chunk_size.value, 10),

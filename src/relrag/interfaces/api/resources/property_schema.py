@@ -6,6 +6,18 @@ import falcon.asgi
 
 from relrag.domain.value_objects import PermissionAction
 
+# Human-readable labels for property keys (filter UI).
+PROPERTY_KEY_LABELS: dict[str, str] = {
+    "title": "Название",
+    "author": "Автор",
+    "created_date": "Дата создания",
+    "modified_date": "Дата изменения",
+    "page_count": "Кол-во страниц",
+    "language": "Язык",
+    "source_file_name": "Имя файла",
+    "source_file_type": "Тип файла",
+}
+
 
 class PropertySchemaResource:
     """GET /v1/collections/{collection_id}/property-schema."""
@@ -45,6 +57,7 @@ class PropertySchemaResource:
             "properties": [
                 {
                     "key": item.key,
+                    "label": PROPERTY_KEY_LABELS.get(item.key, item.key),
                     "type": item.property_type.value,
                     "values": item.values,
                 }

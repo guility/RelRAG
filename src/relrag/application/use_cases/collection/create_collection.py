@@ -17,6 +17,7 @@ class CreateCollectionUseCase:
         self,
         user_id: str,
         configuration_id: UUID,
+        name: str | None = None,
     ) -> Collection:
         """Create collection and assign admin role to creator."""
         async with self._uow_factory() as uow:
@@ -34,6 +35,7 @@ class CreateCollectionUseCase:
                 created_at=now,
                 updated_at=now,
                 deleted_at=None,
+                name=name or None,
             )
             await uow.collections.create(collection)
 

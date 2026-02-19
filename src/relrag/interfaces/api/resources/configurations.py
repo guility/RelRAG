@@ -31,6 +31,7 @@ class ConfigurationsResource:
             "items": [
                 {
                     "id": str(c.id),
+                    "name": c.name,
                     "chunking_strategy": c.chunking_strategy.value,
                     "embedding_model": c.embedding_model,
                     "embedding_dimensions": c.embedding_dimensions,
@@ -57,6 +58,7 @@ class ConfigurationsResource:
             )
             chunk_size = body.get("chunk_size", 512)
             chunk_overlap = body.get("chunk_overlap", 50)
+            name = (body.get("name") or "").strip() or None
         except (KeyError, ValueError) as e:
             resp.status = falcon.HTTP_400
             resp.media = {"error": str(e)}
@@ -69,6 +71,7 @@ class ConfigurationsResource:
             embedding_dimensions=embedding_dimensions,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
+            name=name,
         )
 
         async with self._uow_factory() as uow:
@@ -76,6 +79,7 @@ class ConfigurationsResource:
 
         resp.media = {
             "id": str(config.id),
+            "name": config.name,
             "chunking_strategy": config.chunking_strategy.value,
             "embedding_model": config.embedding_model,
             "embedding_dimensions": config.embedding_dimensions,

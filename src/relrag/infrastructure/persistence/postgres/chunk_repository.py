@@ -119,33 +119,46 @@ class PostgresChunkRepository:
     ) -> list[dict]:
         """Hybrid search with optional property filters."""
         where_extra = ""
-        params: list[object] = [query_embedding, collection_id, query_embedding]
+        full_params: list[object] = []
         if property_filters:
             conds, filter_params = _build_property_filter_conditions(property_filters)
             if conds:
                 where_extra = " AND " + " AND ".join(conds)
-                params.extend(filter_params)
-        params.append(limit)
+                full_params.extend(filter_params)
+        query_fts_param = query_fts.strip() if (query_fts and isinstance(query_fts, str)) else ""
+        full_params = [query_embedding, query_fts_param, query_fts_param, collection_id] + full_params + [vector_weight, fts_weight, vector_weight, fts_weight, limit]
         cur = await self._conn.execute(
             f"""
-            SELECT c.id as chunk_id, c.pack_id, c.content,
-                   (1 - (c.embedding <=> %s::vector)) as vector_score
-            FROM chunk c
-            JOIN pack p ON p.id = c.pack_id
-            JOIN pack_collection pc ON pc.pack_id = p.id AND pc.collection_id = %s
-            WHERE p.deleted_at IS NULL{where_extra}
-            ORDER BY c.embedding <=> %s::vector
+            WITH scored AS (
+                SELECT c.id AS chunk_id, c.pack_id, p.document_id, c.content,
+                       (1 - (c.embedding <=> %s::vector)) AS vector_score,
+                       CASE WHEN %s != '' THEN ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', %s)) ELSE 0 END AS fts_score,
+                       pr.doc_props
+                FROM chunk c
+                JOIN pack p ON p.id = c.pack_id
+                JOIN pack_collection pc ON pc.pack_id = p.id AND pc.collection_id = %s
+                LEFT JOIN LATERAL (SELECT json_object_agg(key, value) AS doc_props FROM property WHERE document_id = p.document_id) pr ON true
+                WHERE p.deleted_at IS NULL{where_extra}
+            )
+            SELECT chunk_id, pack_id, document_id, content, vector_score, fts_score,
+                   (vector_score * %s + fts_score * %s) AS score, doc_props
+            FROM scored
+            ORDER BY (vector_score * %s + fts_score * %s) DESC
             LIMIT %s
             """,
-            params,
+            full_params,
         )
         rows = await cur.fetchall()
         return [
             {
                 "chunk_id": r[0],
                 "pack_id": r[1],
-                "content": r[2],
-                "score": float(r[3]) * vector_weight,
+                "document_id": r[2],
+                "content": r[3],
+                "vector_score": float(r[4]),
+                "fts_score": float(r[5]),
+                "score": float(r[6]),
+                "doc_props": r[7],
             }
             for r in rows
         ]

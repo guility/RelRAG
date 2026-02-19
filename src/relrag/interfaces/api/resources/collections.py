@@ -39,6 +39,7 @@ class CollectionsResource:
             "items": [
                 {
                     "id": str(c.id),
+                    "name": c.name,
                     "configuration_id": str(c.configuration_id),
                     "created_at": c.created_at.isoformat(),
                     "updated_at": c.updated_at.isoformat(),
@@ -60,15 +61,19 @@ class CollectionsResource:
         try:
             body = await req.get_media()
             configuration_id = UUID(body["configuration_id"])
+            name = (body.get("name") or "").strip() or None
         except (KeyError, ValueError) as e:
             resp.status = falcon.HTTP_400
             resp.media = {"error": str(e)}
             return
 
         try:
-            result = await self._create_collection.execute(user.user_id, configuration_id)
+            result = await self._create_collection.execute(
+                user.user_id, configuration_id, name=name
+            )
             resp.media = {
                 "id": str(result.id),
+                "name": result.name,
                 "configuration_id": str(result.configuration_id),
                 "created_at": result.created_at.isoformat(),
                 "updated_at": result.updated_at.isoformat(),
@@ -123,6 +128,7 @@ class CollectionResource:
 
         resp.media = {
             "id": str(coll.id),
+            "name": coll.name,
             "configuration_id": str(coll.configuration_id),
             "created_at": coll.created_at.isoformat(),
             "updated_at": coll.updated_at.isoformat(),

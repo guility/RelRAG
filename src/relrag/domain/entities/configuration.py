@@ -16,3 +16,4 @@ class Configuration:
     embedding_dimensions: int
     chunk_size: int
     chunk_overlap: int
+    name: str | None = None

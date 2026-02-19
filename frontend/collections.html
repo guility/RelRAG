@@ -34,6 +34,7 @@
       </ol>
     </div>
     <form id="formCreate">
+      <label>Название <input type="text" name="name" placeholder="Например: Документация проекта" maxlength="255"></label>
       <label>Конфигурация <select id="configId" name="configuration_id" required></select></label>
       <button type="submit">Создать</button>
     </form>
@@ -49,6 +50,7 @@
     (function () {
       const api = window.relragApi;
       const auth = window.relragAuth;
+      function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 
       function loadConfigs() {
         return api.get("/v1/configurations").then(function (res) {
@@ -60,7 +62,8 @@
           if (data && data.items && data.items.length > 0) {
             if (hint) hint.style.display = "none";
             data.items.forEach(function (c) {
-              sel.innerHTML += "<option value='" + c.id + "'>" + c.id + " (" + c.embedding_model + ")</option>";
+              var configLabel = (c.name && c.name.trim()) ? c.name : c.id;
+              sel.innerHTML += "<option value='" + c.id + "'>" + escapeHtml(configLabel) + " (" + escapeHtml(c.embedding_model) + ")</option>";
             });
           } else {
             if (hint) hint.style.display = "block";
@@ -74,9 +77,10 @@
         }).then(function (data) {
           const el = document.getElementById("list");
           if (data && data.items && data.items.length > 0) {
-            el.innerHTML = "<div class='card'><table><thead><tr><th>ID</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
+            el.innerHTML = "<div class='card'><table><thead><tr><th>Название</th><th>Конфигурация</th><th>Создана</th><th></th></tr></thead><tbody>" +
               data.items.map(function (c) {
-                return "<tr><td>" + c.id + "</td><td>" + c.configuration_id + "</td><td>" + c.created_at + "</td>" +
+                var name = (c.name && c.name.trim()) ? c.name : c.id;
+                return "<tr><td>" + escapeHtml(name) + "</td><td>" + escapeHtml(c.configuration_id) + "</td><td>" + c.created_at + "</td>" +
                   "<td><a href='collection.html?id=" + c.id + "'>Открыть</a></td></tr>";
               }).join("") + "</tbody></table></div>";
           } else {
@@ -89,9 +93,11 @@
 
       document.getElementById("formCreate").onsubmit = function (e) {
         e.preventDefault();
+        const form = e.target;
         const configId = document.getElementById("configId").value;
+        const nameVal = (form.name && form.name.value || "").trim();
         if (!configId) return;
-        api.post("/v1/collections", { configuration_id: configId }).then(function (res) {
+        api.post("/v1/collections", { configuration_id: configId, name: nameVal || undefined }).then(function (res) {
           return api.handleResponse(res);
         }).then(function (data) {
           if (data && data.id) {

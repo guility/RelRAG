@@ -14,3 +14,4 @@ class Collection:
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
+    name: str | None = None
