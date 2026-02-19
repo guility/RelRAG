@@ -1,6 +1,8 @@
 """Document API resources."""
 
 import json
+import re
+from urllib.parse import unquote_to_bytes
 from uuid import UUID
 
 import falcon.asgi
@@ -10,6 +12,9 @@ from relrag.application.use_cases.document.get_document import GetDocumentUseCas
 from relrag.application.use_cases.document.load_document import LoadDocumentUseCase
 from relrag.domain.exceptions import NotFound, PermissionDenied, ValidationError
 from relrag.infrastructure.document_parsers import parse_file
+
+# RFC 5987: filename*=charset''percent-encoded (two single quotes)
+_FILENAME_STAR_RFC5987 = re.compile(r"([\w-]+)''(.+)")
 
 
 def _decode_filename(raw: str | None) -> str:
@@ -27,6 +32,48 @@ def _decode_filename(raw: str | None) -> str:
         except (UnicodeEncodeError, UnicodeDecodeError):
             return raw
     return raw
+
+
+def _parse_filename_star_from_header(raw_header_value: bytes) -> str | None:
+    """Parse Content-Disposition raw value for filename*=charset''percent-encoded (RFC 5987)."""
+    if not raw_header_value:
+        return None
+    try:
+        # Header value may be: form-data; name="files"; filename*=UTF-8''%D0%94%D0%BE%D0%BA...
+        decoded = raw_header_value.decode("utf-8", errors="replace")
+    except Exception:
+        return None
+    # Find filename*= (parameter name can be filename*)
+    idx = decoded.find("filename*=")
+    if idx == -1:
+        return None
+    rest = decoded[idx + len("filename*=") :].strip()
+    match = _FILENAME_STAR_RFC5987.match(rest)
+    if not match:
+        return None
+    charset, encoded = match.groups()
+    try:
+        return unquote_to_bytes(encoded).decode(charset)
+    except (ValueError, LookupError):
+        return None
+
+
+def _get_part_filename(part: object, fallback_index: int) -> str:
+    """Get filename from multipart part: part.filename / filename* from raw header + _decode_filename, else file_N."""
+    raw = ""
+    try:
+        raw = (getattr(part, "filename", None) or "").strip()
+    except Exception:
+        pass
+    if not raw:
+        headers = getattr(part, "_headers", None)
+        if isinstance(headers, dict):
+            cd = headers.get(b"content-disposition", b"")
+            raw_star = _parse_filename_star_from_header(cd)
+            if raw_star:
+                raw = raw_star.strip()
+    decoded = _decode_filename(raw) if raw else ""
+    return decoded if decoded else f"file_{fallback_index}"
 
 
 def _sse_event(event: str, data: dict) -> bytes:
@@ -94,14 +141,18 @@ class DocumentsResource:
             return
         collection_id_str: str | None = None
         files: list[tuple[bytes, str]] = []
+        file_index = 0
         async for part in form:
             name = part.name or ""
             if name == "collection_id":
                 data = await part.get_data()
                 collection_id_str = data.decode("utf-8").strip()
-            elif name in ("files", "files[]") and part.filename:
+            elif name in ("files", "files[]"):
                 data = await part.get_data()
-                filename = _decode_filename(part.filename or part.secure_filename) or "file"
+                if not data:
+                    continue
+                file_index += 1
+                filename = _get_part_filename(part, file_index)
                 files.append((bytes(data), filename))
         if not collection_id_str:
             resp.status = falcon.HTTP_400
@@ -184,8 +235,7 @@ class DocumentsStreamResource:
                 if not data:
                     continue
                 file_index += 1
-                raw_name = (part.filename or part.secure_filename or "").strip()
-                filename = _decode_filename(raw_name) if raw_name else f"file_{file_index}"
+                filename = _get_part_filename(part, file_index)
                 files.append((bytes(data), filename))
 
         if not collection_id_str:

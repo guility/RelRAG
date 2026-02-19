@@ -7,7 +7,11 @@ from uuid import uuid4
 import pytest
 from falcon.testing import TestClient
 
-from relrag.interfaces.api.resources.documents import _decode_filename
+from relrag.interfaces.api.resources.documents import (
+    _decode_filename,
+    _get_part_filename,
+    _parse_filename_star_from_header,
+)
 
 
 class TestDecodeFilename:
@@ -30,6 +34,47 @@ class TestDecodeFilename:
         # UTF-8 bytes for "Документ" were decoded as Latin-1
         mojibake = bytes([0xD0, 0x94, 0xD0, 0xBE, 0xD0, 0xBA, 0xD1, 0x83, 0xD0, 0xBC, 0xD0, 0xB5, 0xD0, 0xBD, 0xD1, 0x82]).decode("latin-1")
         assert _decode_filename(mojibake) == "Документ"
+
+
+class TestParseFilenameStar:
+    """Tests for RFC 5987 filename* parsing from raw Content-Disposition."""
+
+    def test_parse_filename_star_utf8_cyrillic(self) -> None:
+        # filename*=UTF-8''%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82.txt
+        raw = b"form-data; name=\"files\"; filename*=UTF-8''%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82.txt"
+        assert _parse_filename_star_from_header(raw) == "Документ.txt"
+
+    def test_parse_filename_star_missing_returns_none(self) -> None:
+        raw = b'form-data; name="files"; filename="test.txt"'
+        assert _parse_filename_star_from_header(raw) is None
+
+    def test_parse_filename_star_empty_returns_none(self) -> None:
+        assert _parse_filename_star_from_header(b"") is None
+
+
+class TestGetPartFilename:
+    """Tests for _get_part_filename with mock part."""
+
+    def test_get_part_filename_uses_fallback_when_empty(self) -> None:
+        part = type("Part", (), {"filename": "", "_headers": {}})()
+        assert _get_part_filename(part, 1) == "file_1"
+
+    def test_get_part_filename_uses_filename_star_from_headers_when_filename_empty(self) -> None:
+        part = type(
+            "Part",
+            (),
+            {
+                "filename": "",
+                "_headers": {
+                    b"content-disposition": b"form-data; name=\"files\"; filename*=UTF-8''%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82.txt",
+                },
+            },
+        )()
+        assert _get_part_filename(part, 1) == "Документ.txt"
+
+    def test_get_part_filename_prefers_part_filename(self) -> None:
+        part = type("Part", (), {"filename": "given.txt", "_headers": {}})()
+        assert _get_part_filename(part, 1) == "given.txt"
 
 
 class TestHealth:
@@ -197,6 +242,40 @@ class TestDocuments:
         assert "documents" in data
         assert len(data["documents"]) == 1
         assert data["documents"][0]["content"] == "Hello stream upload"
+
+    def test_post_documents_stream_cyrillic_filename(self, client: TestClient) -> None:
+        """POST /v1/documents/stream preserves Cyrillic filename (filename*=UTF-8'' or mojibake in filename=)."""
+        cr = client.simulate_post(
+            "/v1/configurations",
+            json={"embedding_model": "text-embedding-3-small", "chunk_size": 512},
+        )
+        config_id = cr.json["id"]
+        coll_r = client.simulate_post(
+            "/v1/collections",
+            json={"configuration_id": config_id},
+        )
+        coll_id = coll_r.json["id"]
+        boundary = "----CyrillicBoundary"
+        # Use filename*=UTF-8'' for "Документ.txt" (RFC 5987)
+        body = (
+            f"--{boundary}\r\n"
+            "Content-Disposition: form-data; name=\"collection_id\"\r\n\r\n"
+            f"{coll_id}\r\n"
+            f"--{boundary}\r\n"
+            "Content-Disposition: form-data; name=\"files\"; filename*=UTF-8''%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82.txt\r\n"
+            "Content-Type: text/plain; charset=utf-8\r\n\r\n"
+            "Cyrillic file content\r\n"
+            f"--{boundary}--\r\n"
+        ).encode("utf-8")
+        headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+        r = client.simulate_post("/v1/documents/stream", body=body, headers=headers)
+        assert r.status_code == 200
+        text = r.text or ""
+        assert "Документ.txt" in text
+        done_match = re.search(r"event: done\s*\ndata: (.+?)(?:\n|$)", text)
+        assert done_match
+        data = json.loads(done_match.group(1).strip())
+        assert len(data["documents"]) == 1
 
 
 class TestConfigurationsErrors:

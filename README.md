@@ -32,7 +32,7 @@ docker compose up -d
 
 ## Frontend (SSO)
 
-После `docker compose up -d` фронтенд доступен на http://localhost:8081. Вход через Keycloak (testuser/testpass). Локальная разработка: `python -m http.server 8081` в папке `frontend/` (предварительно задать `RELRAG_CONFIG` в index.html или config.js для API и Keycloak).
+После `docker compose up -d` фронтенд доступен на http://localhost:8081. Вход через Keycloak: тестовые пользователи с правами администратора — **testuser** / **testpass** или **testadmin** / **testadmin**. Локальная разработка: `python -m http.server 8081` в папке `frontend/` (предварительно задать `RELRAG_CONFIG` в index.html или config.js для API и Keycloak).
 
 ## Testing
 

@@ -20,9 +20,12 @@ from relrag.infrastructure.chunking.recursive_chunker import RecursiveChunker
 
 from tests.conftest import FakeUnitOfWork, mock_embedding_provider, mock_permission_checker
 
+# Test user with admin privileges (used by AuthBypassMiddleware in API tests)
+TEST_ADMIN_USER_ID = "test-user-1"
+
 
 class _TestUser:
-    user_id = "test-user-1"
+    user_id = TEST_ADMIN_USER_ID
 
 
 class AuthBypassMiddleware:

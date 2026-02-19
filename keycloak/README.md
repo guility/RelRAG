@@ -8,8 +8,11 @@
 
 | Роль | Пользователь | Пароль |
 |------|--------------|--------|
-| Admin | admin | admin |
-| Тестовый пользователь | testuser | testpass |
+| Keycloak Admin (консоль) | admin | admin |
+| Тестовый пользователь с правами администратора | testuser | testpass |
+| Тестовый администратор | testadmin | testadmin |
+
+Для тестов и ручной проверки используйте пользователя с правами администратора: **testuser** / **testpass** или **testadmin** / **testadmin**.
 
 ## Клиент relrag-api
 
