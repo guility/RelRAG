@@ -26,7 +26,7 @@ litellm-gateway:4000  ──►  giga-embedding:8000
 - Модель: [ai-sage/Giga-Embeddings-instruct-480M-0826](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826).
 - Закреплённая ревизия: [1763d603adac8057bd6482a708001b0ed2e0a903](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826/tree/1763d603adac8057bd6482a708001b0ed2e0a903).
 - Прямая ссылка на веса: [model.safetensors](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826/resolve/1763d603adac8057bd6482a708001b0ed2e0a903/model.safetensors).
-- ARAG хранит revision и SHA-256 каждого ожидаемого файла в `scripts/v3/giga_embeddings/metadata/model.json`; загрузчик использует только закреплённую ревизию.
+- В handoff-каталоге сохранена копия [model.json](model.json) для чтения и сверки. Runtime берёт revision и SHA-256 каждого ожидаемого файла из `ARAG_ROOT/scripts/v3/giga_embeddings/metadata/model.json`; загрузчик использует только закреплённую ревизию.
 - Загрузчик пишет snapshot в `/models/giga` внутри named volume `arag-stage0_giga_model_files_v1`. Основной файл будет доступен как `/models/giga/model.safetensors` внутри контейнера. При старте inference проверяются SHA-256 всех ожидаемых файлов.
 - Изображение и vector cache в git не попадают. Остановка Compose сохраняет volume с моделью.
 
