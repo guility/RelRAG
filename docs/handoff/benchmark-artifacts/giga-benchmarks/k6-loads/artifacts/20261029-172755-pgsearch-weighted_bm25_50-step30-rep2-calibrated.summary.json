@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261029-172755-pgsearch-weighted_bm25_50-step30-rep2-calibrated",
+    "profile": "pgsearch",
+    "route": "weighted_bm25_50",
+    "target_rps": 30,
+    "transactions_planned": 900,
+    "duration_seconds": 30,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 15,
+    "max_vus": 60
+  },
+  "metrics": {
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 69.570252,
+        "med": 75.435261,
+        "max": 160.667515,
+        "p(90)": 98.493323,
+        "p(95)": 115.271727,
+        "p(99)": 135.818279,
+        "avg": 80.23399537957827
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 901,
+        "rate": 29.957269578080794
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 2,
+        "min": 2,
+        "max": 3
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 15,
+        "min": 15,
+        "max": 15
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "dropped_iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      }
+    },
+    "retrieval_active_vus": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(95)": 4,
+        "p(99)": 5,
+        "avg": 3.1076581576026636,
+        "min": 1,
+        "med": 3,
+        "max": 5,
+        "p(90)": 3
+      }
+    },
+    "retrieval_sql_duration_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 78.50610432852386,
+        "min": 68,
+        "med": 74,
+        "max": 148,
+        "p(90)": 97,
+        "p(95)": 113,
+        "p(99)": 124
+      }
+    },
+    "retrieval_load_errors": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 901
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      }
+    },
+    "retrieval_result_rows": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 90100,
+        "rate": 2995.7269578080795
+      }
+    }
+  }
+}

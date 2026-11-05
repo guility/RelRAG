@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261104-081257-pgvector-dense_binary-miraclbin20r1",
+    "profile": "pgvector",
+    "route": "dense_binary",
+    "target_rps": 20,
+    "transactions_planned": 400,
+    "duration_seconds": 20,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 80,
+    "max_vus": 160
+  },
+  "metrics": {
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "retrieval_load_errors": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 401
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      }
+    },
+    "iterations": {
+      "values": {
+        "count": 401,
+        "rate": 20.027731200726443
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "retrieval_active_vus": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "avg": 1.032418952618454,
+        "min": 1,
+        "med": 1,
+        "max": 2,
+        "p(90)": 1,
+        "p(95)": 1,
+        "p(99)": 2
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "vus_max": {
+      "contains": "default",
+      "values": {
+        "value": 80,
+        "min": 80,
+        "max": 80
+      },
+      "type": "gauge"
+    },
+    "retrieval_sql_duration_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 41,
+        "p(99)": 51,
+        "avg": 26.541147132169577,
+        "min": 10,
+        "med": 25,
+        "max": 63,
+        "p(90)": 38
+      }
+    },
+    "retrieval_result_rows": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 40100,
+        "rate": 2002.7731200726444
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 11.160001,
+        "med": 26.765235,
+        "max": 67.153274,
+        "p(90)": 42.553629,
+        "p(95)": 47.070938,
+        "p(99)": 57.863426,
+        "avg": 28.797860027431433
+      }
+    },
+    "dropped_iterations": {
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    }
+  }
+}

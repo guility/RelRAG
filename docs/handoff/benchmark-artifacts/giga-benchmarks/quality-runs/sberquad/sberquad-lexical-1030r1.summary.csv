@@ -1,0 +1,2 @@
+"run_id","candidate","status","exit_code","query_count","corpus_count","dense_ndcg_at_10","lexical_ndcg_at_10","hybrid_ndcg_at_10","runner_cpu_peak_percent","database_cpu_peak_percent","runner_memory_peak_mib","database_memory_peak_mib","report_file","runner_image_id"
+"20261029-195755-lexical-1030r1","rum","failed","1","23936","17474","0.7813132797196713","0.4965011260028886","0.8744865782777347","50.24","101.48","159.5","672.3","sberquad-pgvector-fts_rum-2026-10-1030r1.json","sha256:881fc8e0722bda4c80be9ea3bba8337482cfe0cf7e359cad1f7ba670f2a48840"

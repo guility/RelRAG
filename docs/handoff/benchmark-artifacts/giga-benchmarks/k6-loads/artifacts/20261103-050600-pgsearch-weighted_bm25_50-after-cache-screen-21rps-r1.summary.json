@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261103-050600-pgsearch-weighted_bm25_50-after-cache-screen-21rps-r1",
+    "profile": "pgsearch",
+    "route": "weighted_bm25_50",
+    "target_rps": 21,
+    "transactions_planned": 630,
+    "duration_seconds": 30,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 84,
+    "max_vus": 168
+  },
+  "metrics": {
+    "vus_max": {
+      "contains": "default",
+      "values": {
+        "max": 84,
+        "value": 84,
+        "min": 84
+      },
+      "type": "gauge"
+    },
+    "dropped_iterations": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "retrieval_active_vus": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(99)": 12,
+        "avg": 3.399366085578447,
+        "min": 1,
+        "med": 2,
+        "max": 14,
+        "p(90)": 7,
+        "p(95)": 10
+      }
+    },
+    "retrieval_sql_duration_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 305,
+        "p(95)": 402.5,
+        "p(99)": 512.4000000000001,
+        "avg": 132.50396196513472,
+        "min": 68,
+        "med": 86,
+        "max": 677
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 328.400752,
+        "p(95)": 425.950584,
+        "p(99)": 564.3385322,
+        "avg": 139.84218803645,
+        "min": 69.340621,
+        "med": 88.056234,
+        "max": 695.711324
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 631,
+        "rate": 20.97914387254078
+      }
+    },
+    "retrieval_result_rows": {
+      "contains": "default",
+      "values": {
+        "count": 63100,
+        "rate": 2097.914387254078
+      },
+      "type": "counter"
+    },
+    "data_received": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "retrieval_load_errors": {
+      "values": {
+        "fails": 631,
+        "rate": 0,
+        "passes": 0
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "vus": {
+      "contains": "default",
+      "values": {
+        "min": 1,
+        "max": 12,
+        "value": 1
+      },
+      "type": "gauge"
+    }
+  }
+}

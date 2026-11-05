@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261029-082803-vectorchord-dense-rep3",
+    "profile": "vectorchord",
+    "route": "dense",
+    "target_rps": 10,
+    "transactions_planned": 200,
+    "duration_seconds": 20,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 4,
+    "max_vus": 20
+  },
+  "metrics": {
+    "retrieval_sql_duration_ms": {
+      "values": {
+        "p(99)": 9.009999999999991,
+        "avg": 4.375,
+        "min": 2,
+        "med": 4,
+        "max": 10,
+        "p(90)": 7,
+        "p(95)": 8
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "retrieval_result_rows": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "rate": 999.9462520389985,
+        "count": 20000
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "vus_max": {
+      "values": {
+        "value": 4,
+        "min": 4,
+        "max": 4
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "retrieval_load_errors": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 200
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      }
+    },
+    "retrieval_active_vus": {
+      "values": {
+        "med": 1,
+        "max": 1,
+        "p(90)": 1,
+        "p(95)": 1,
+        "p(99)": 1,
+        "avg": 1,
+        "min": 1
+      },
+      "type": "trend",
+      "contains": "default"
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 200,
+        "rate": 9.999462520389985
+      }
+    },
+    "dropped_iterations": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 10.124895249999987,
+        "p(99)": 16.556951719999997,
+        "avg": 5.702815260000003,
+        "min": 2.857757,
+        "med": 5.082262,
+        "max": 16.88572,
+        "p(90)": 8.1142963
+      }
+    }
+  }
+}

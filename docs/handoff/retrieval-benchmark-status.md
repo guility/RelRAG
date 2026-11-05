@@ -60,10 +60,10 @@ These are research-method and operating decisions, not a production architecture
 
 ## Handoff gaps and next steps
 
-- The three GitHub issues contain the executable scope and summarized outcomes, but detailed source CSV/JSON artifacts and the original ARAG benchmark catalog are **not copied into this repository branch**. The source report paths are under docs/architecture/catalog/data/giga-benchmarks/ and docs/architecture/catalog/data/retrieval-spike-plan.md in the ARAG repository. Transfer or link the required per-run artifacts before claiming a fully self-contained archival handoff.
+- Selected benchmark summaries, aggregates, manifests/provenance and quality-runs/run-register.csv have been copied to [benchmark-artifacts](benchmark-artifacts/README.md): 350 summary/aggregate files, 10 screening summaries, 19 manifests/provenance files and the register (380 CSV/JSON files; 744,971 bytes). Per-file SHA-256 values are included and the copies were verified. Warm-up summaries, raw resource/transaction/sample telemetry, failure/progress/debug files and other per-run detail outputs are intentionally excluded. The original narrative ARAG benchmark catalog and full retrieval-spike plan remain source-side; this document preserves their consolidated plan/status/results/decision summary.
 - Exact historical vector-cache reconstruction is **not yet reproducible from the handoff**. SberQUAD/RuBQ lack a standalone cache-only builder and recorded per-array hashes; MIRACL has a cache builder but its historical cache manifest was not archived. Preserve cache keys, manifest SHA-256 values, exact source tree/image ID and GPU/driver provenance on future runs.
 - Linux runtime validation is pending. The Giga Compose/config has a runbook, but that is not evidence of a completed GPU inference run on the target Linux host.
-- Next: port and validate the benchmark harness on Linux; attach/import source CSV/JSON and manifests; verify Giga GPU smoke and cache identity; run comparable quality/build/load matrices; close security findings before admitting affected images.
+- Next: verify the transferred summary manifest on Linux; port and validate the benchmark harness; import the narrative source plan if needed; verify Giga GPU smoke and cache identity; run comparable quality/build/load matrices; transfer raw telemetry only if needed for follow-up; close security findings before admitting affected images.
 
 ## Source of truth
 
@@ -71,3 +71,4 @@ These are research-method and operating decisions, not a production architecture
 - [Issue #2 — public retrieval quality](https://github.com/guility/RelRAG/issues/2)
 - [Issue #3 — builds, load and resources](https://github.com/guility/RelRAG/issues/3)
 - [GigaEmbeddings runbook](giga-embeddings/README.md)
+

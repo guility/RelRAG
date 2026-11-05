@@ -1,0 +1,45 @@
+﻿{
+    "schema_version":  "v1",
+    "run_id":  "20261030-044338904-lexical-1030r8-d41e72cb",
+    "run_label":  "1030r8",
+    "candidates":  [
+                       "rum"
+                   ],
+    "started_utc":  "2026-10-30T04:44:32.2454921+00:00",
+    "ended_utc":  "2026-10-30T05:22:45.1066943+00:00",
+    "git_revision":  "e7bbaf4fffdb1bcfd991c12fa02a65279991f913",
+    "worktree_dirty":  true,
+    "dataset_manifest_sha256":  "f4870a8e0555cc9b89e9a30a86f9db471f561efe5c10d98eda8025416710419b",
+    "database_image":  "arag/postgres-lexical-benchmark@sha256:e6fb1c29a39032a404b1fd669886e568a16593609c976771a88827af243dcdbc",
+    "database_image_ids":  [
+                               {
+                                   "candidate":  "rum",
+                                   "image_id":  "sha256:e6fb1c29a39032a404b1fd669886e568a16593609c976771a88827af243dcdbc"
+                               }
+                           ],
+    "resource_envelope":  {
+                              "per_stand_cpu":  "3 vCPU",
+                              "per_stand_memory":  "6 GiB",
+                              "stands_in_wave":  1,
+                              "max_parallel_stands":  3,
+                              "shared_gpu_cpu":  "4 vCPU",
+                              "shared_gpu_memory":  "10 GiB",
+                              "shared_gateway_cpu":  "1 vCPU",
+                              "shared_gateway_memory":  "2 GiB",
+                              "current_wave_cpu":  "8 vCPU",
+                              "current_wave_memory":  "18 GiB",
+                              "max_wave_cpu":  "14 vCPU",
+                              "max_wave_memory":  "30 GiB"
+                          },
+    "runner_image_ids":  [
+                             {
+                                 "candidate":  "rum",
+                                 "image_id":  "sha256:44433071991fbbb48a6acf0ce46a209c233c121af4c90c0e33d672f54504446f"
+                             }
+                         ],
+    "reports":  [
+                    "sberquad-pgvector-fts_rum-2026-10-20261030-044338904-lexical-1030r8-d41e72cb.json"
+                ],
+    "resources_csv":  "sberquad-lexical-20261030-044338904-lexical-1030r8-d41e72cb-rum.resources.csv",
+    "summary_csv":  "sberquad-lexical-20261030-044338904-lexical-1030r8-d41e72cb-rum.summary.csv"
+}

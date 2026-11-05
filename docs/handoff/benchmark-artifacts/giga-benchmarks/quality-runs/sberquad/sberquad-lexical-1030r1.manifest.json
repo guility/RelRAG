@@ -1,0 +1,45 @@
+{
+  "schema_version": "v1",
+  "run_id": "20261029-195755-lexical-1030r1",
+  "run_label": "1030r1",
+  "candidates": [
+    "rum"
+  ],
+  "started_utc": "2026-10-30T02:59:09.0694749+07:00",
+  "ended_utc": "2026-10-30T03:29:21.3173406+07:00",
+  "git_revision": "e7bbaf4fffdb1bcfd991c12fa02a65279991f913",
+  "worktree_dirty": true,
+  "dataset_manifest_sha256": "f4870a8e0555cc9b89e9a30a86f9db471f561efe5c10d98eda8025416710419b",
+  "database_image": "arag/postgres-lexical-benchmark@sha256:c8b9ccf49d72cf1a9050db5f427d312d4fbb0898f46f7c94974303b3f02b5845",
+  "database_image_ids": [
+    {
+      "image_id": "sha256:c8b9ccf49d72cf1a9050db5f427d312d4fbb0898f46f7c94974303b3f02b5845",
+      "candidate": "rum"
+    }
+  ],
+  "resource_envelope": {
+    "per_stand_cpu": "3 vCPU",
+    "per_stand_memory": "6 GiB",
+    "max_parallel_stands": 3,
+    "shared_gpu_cpu": "3.5 vCPU",
+    "shared_gpu_memory": "8 GiB",
+    "shared_gateway_cpu": "1 vCPU",
+    "shared_gateway_memory": "2 GiB",
+    "max_wave_cpu": "13.5 vCPU",
+    "max_wave_memory": "28 GiB",
+    "stands_in_wave": 1,
+    "current_wave_cpu": "7.5 vCPU",
+    "current_wave_memory": "16 GiB"
+  },
+  "runner_image_ids": [
+    {
+      "candidate": "rum",
+      "image_id": "sha256:881fc8e0722bda4c80be9ea3bba8337482cfe0cf7e359cad1f7ba670f2a48840"
+    }
+  ],
+  "reports": [
+    "sberquad-pgvector-fts_rum-2026-10-1030r1.json"
+  ],
+  "resources_csv": "sberquad-lexical-1030r1.resources.csv",
+  "summary_csv": "sberquad-lexical-1030r1.summary.csv"
+}

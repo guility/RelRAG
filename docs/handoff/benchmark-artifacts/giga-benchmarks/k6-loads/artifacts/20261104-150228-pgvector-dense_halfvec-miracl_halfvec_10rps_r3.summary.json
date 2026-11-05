@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261104-150228-pgvector-dense_halfvec-miracl_halfvec_10rps_r3",
+    "profile": "pgvector",
+    "route": "dense_halfvec",
+    "target_rps": 10,
+    "transactions_planned": 200,
+    "duration_seconds": 20,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 20,
+    "max_vus": 80
+  },
+  "metrics": {
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 201,
+        "rate": 9.214517444379188
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 20,
+        "value": 20,
+        "min": 20
+      }
+    },
+    "dropped_iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "retrieval_active_vus": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "min": 1,
+        "med": 8,
+        "max": 19,
+        "p(90)": 17,
+        "p(95)": 18,
+        "p(99)": 19,
+        "avg": 8.467661691542288
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "vus": {
+      "contains": "default",
+      "values": {
+        "value": 6,
+        "min": 0,
+        "max": 18
+      },
+      "type": "gauge"
+    },
+    "retrieval_load_errors": {
+      "contains": "default",
+      "values": {
+        "passes": 0,
+        "fails": 201,
+        "rate": 0
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      },
+      "type": "rate"
+    },
+    "retrieval_result_rows": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 20100,
+        "rate": 921.4517444379188
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 859.7470580597015,
+        "min": 35.056148,
+        "med": 673.257052,
+        "max": 3386.71633,
+        "p(90)": 1928.967534,
+        "p(95)": 2181.780464,
+        "p(99)": 2552.768078
+      }
+    },
+    "retrieval_sql_duration_ms": {
+      "contains": "time",
+      "values": {
+        "p(90)": 1928,
+        "p(95)": 2181,
+        "p(99)": 2551,
+        "avg": 854.8905472636816,
+        "min": 34,
+        "med": 672,
+        "max": 3385
+      },
+      "type": "trend"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "schema_version": "v1",
+  "run_id": "20261029-203458-lexical-1030r2",
+  "run_label": "1030r2",
+  "run_outcome": "aborted_for_implementation_correction",
+  "comparable": false,
+  "note": "No quality report was produced. PGroonga/pg_trgm query-plan probes exposed unqualified extension functions and psycopg percent-operator escaping; the RUM runner was stopped before full retrieval evaluation so the corrected three-candidate wave can be run from one image.",
+  "candidates": [
+    "rum",
+    "pgroonga",
+    "pg_trgm"
+  ],
+  "started_utc": "2026-10-29T20:36:25.0373540+00:00",
+  "ended_utc": "2026-10-29T20:47:47.4788520+00:00",
+  "git_revision": "e7bbaf4fffdb1bcfd991c12fa02a65279991f913",
+  "worktree_dirty": true,
+  "dataset_manifest_sha256": "f4870a8e0555cc9b89e9a30a86f9db471f561efe5c10d98eda8025416710419b",
+  "database_image": "arag/postgres-lexical-benchmark@sha256:a797e75f9bdd1eae4d3ee5887e47c337d9096db227355932da359aebfaa2a347",
+  "database_image_ids": [
+    {
+      "candidate": "rum",
+      "image_id": "sha256:a797e75f9bdd1eae4d3ee5887e47c337d9096db227355932da359aebfaa2a347"
+    },
+    {
+      "candidate": "pgroonga",
+      "image_id": "sha256:a797e75f9bdd1eae4d3ee5887e47c337d9096db227355932da359aebfaa2a347"
+    },
+    {
+      "candidate": "pg_trgm",
+      "image_id": "sha256:a797e75f9bdd1eae4d3ee5887e47c337d9096db227355932da359aebfaa2a347"
+    }
+  ],
+  "resource_envelope": {
+    "per_stand_cpu": "3 vCPU",
+    "per_stand_memory": "6 GiB",
+    "stands_in_wave": 3,
+    "max_parallel_stands": 3,
+    "shared_gpu_cpu": "3.5 vCPU",
+    "shared_gpu_memory": "8 GiB",
+    "shared_gateway_cpu": "1 vCPU",
+    "shared_gateway_memory": "2 GiB",
+    "current_wave_cpu": "13.5 vCPU",
+    "current_wave_memory": "28 GiB",
+    "max_wave_cpu": "13.5 vCPU",
+    "max_wave_memory": "28 GiB"
+  },
+  "runner_image_ids": [
+    {
+      "candidate": "rum",
+      "image_id": "sha256:9d0774036470aea1978cdfb6f1197ae274c67199f4220cd8e854186206a99a01"
+    },
+    {
+      "candidate": "pgroonga",
+      "image_id": "sha256:896424f34e88a785be104e8abed7b6aa056cbfb4926a19d0833d8aa83fe0c809"
+    },
+    {
+      "candidate": "pg_trgm",
+      "image_id": "sha256:d5cd84d81d795a924ed79acfc03406dc4e5633eac867eb9259e9ab1783f3ddcc"
+    }
+  ],
+  "reports": [
+    "sberquad-pgvector-fts_rum-2026-10-1030r2.json",
+    "sberquad-pgvector-pgroonga-2026-10-1030r2.json",
+    "sberquad-pgvector-pg_trgm-2026-10-1030r2.json"
+  ],
+  "resources_csv": "sberquad-lexical-1030r2.resources.csv",
+  "summary_csv": "sberquad-lexical-1030r2.summary.csv"
+}

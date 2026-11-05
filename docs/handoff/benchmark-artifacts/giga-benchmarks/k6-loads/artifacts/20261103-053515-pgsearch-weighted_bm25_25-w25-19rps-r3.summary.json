@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261103-053515-pgsearch-weighted_bm25_25-w25-19rps-r3",
+    "profile": "pgsearch",
+    "route": "weighted_bm25_25",
+    "target_rps": 19,
+    "transactions_planned": 570,
+    "duration_seconds": 30,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 76,
+    "max_vus": 152
+  },
+  "metrics": {
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "vus_max": {
+      "contains": "default",
+      "values": {
+        "value": 76,
+        "min": 76,
+        "max": 76
+      },
+      "type": "gauge"
+    },
+    "retrieval_load_errors": {
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 571
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      },
+      "type": "rate"
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 2,
+        "min": 2,
+        "max": 3
+      }
+    },
+    "dropped_iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      }
+    },
+    "iteration_duration": {
+      "contains": "time",
+      "values": {
+        "max": 146.585742,
+        "p(90)": 102.228044,
+        "p(95)": 113.508752,
+        "p(99)": 124.75779409999997,
+        "avg": 80.04401301401063,
+        "min": 68.628288,
+        "med": 74.513081
+      },
+      "type": "trend"
+    },
+    "retrieval_sql_duration_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 137,
+        "p(90)": 96,
+        "p(95)": 104,
+        "p(99)": 114.89999999999986,
+        "avg": 77.60245183887916,
+        "min": 67,
+        "med": 73
+      }
+    },
+    "retrieval_result_rows": {
+      "contains": "default",
+      "values": {
+        "count": 57100,
+        "rate": 1898.8420215413805
+      },
+      "type": "counter"
+    },
+    "data_sent": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "iterations": {
+      "contains": "default",
+      "values": {
+        "count": 571,
+        "rate": 18.988420215413804
+      },
+      "type": "counter"
+    },
+    "retrieval_active_vus": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "med": 2,
+        "max": 3,
+        "p(90)": 2,
+        "p(95)": 3,
+        "p(99)": 3,
+        "avg": 2.0893169877408058,
+        "min": 1
+      }
+    }
+  }
+}

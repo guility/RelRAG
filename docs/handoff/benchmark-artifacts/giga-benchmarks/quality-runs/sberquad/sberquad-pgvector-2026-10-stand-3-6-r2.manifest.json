@@ -1,0 +1,36 @@
+{
+  "schema_version": "v1",
+  "run_id": "sberquad-pgvector-2026-10-stand-3-6-r2",
+  "candidate": "pgvector",
+  "status": "completed",
+  "started_utc": "2026-10-29T22:20:13.1494307+00:00",
+  "ended_utc": "2026-10-29T22:49:53.7122061+00:00",
+  "git_sha": "e7bbaf4fffdb1bcfd991c12fa02a65279991f913",
+  "dataset_manifest_sha256": "f4870a8e0555cc9b89e9a30a86f9db471f561efe5c10d98eda8025416710419b",
+  "runner_image_id": "sha256:05feed34d6963ced3cb7c497e156e3a4091aa1db24ac7513639ebcc11fe7a456",
+  "database_image_id": "sha256:f5bb39c9e888afa03a45a4d436abc2de9dba8dcbdff39b705affc8a5c8872f50",
+  "parallel_stands": [
+    "arag-stage0-sberquad-lexical-pg_bigm-1030r4",
+    "arag-stage0-sberquad-lexical-pg_trgm-1030r3",
+    "arag-stage0-sberquad-pgvector-2026-10-stand-3-6-r2"
+  ],
+  "stand_limits": {
+    "cpu": 3,
+    "memory_gib": 6
+  },
+  "shared_limits": {
+    "gpu_service_cpu": 3.5,
+    "gpu_service_memory_bytes": 8589934592,
+    "gateway_cpu": 1.0,
+    "gateway_memory_bytes": 2147483648
+  },
+  "aggregate_wave_limits": {
+    "cpu": 13.5,
+    "memory_gib": 28
+  },
+  "sample_interval_seconds": 3,
+  "resource_csv": "sberquad-pgvector-2026-10-stand-3-6-r2.resources.csv",
+  "gpu_csv": "sberquad-pgvector-2026-10-stand-3-6-r2.gpu.csv",
+  "report_json": "sberquad-pgvector-2026-10-stand-3-6-r2.json",
+  "report_csv": "sberquad-pgvector-2026-10-stand-3-6-r2.csv"
+}

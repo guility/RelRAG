@@ -1,0 +1,4 @@
+"run_id","candidate","status","exit_code","query_count","corpus_count","dense_ndcg_at_10","lexical_ndcg_at_10","hybrid_ndcg_at_10","runner_cpu_peak_percent","database_cpu_peak_percent","runner_memory_peak_mib","database_memory_peak_mib","report_file","runner_image_id"
+"20261029-203458-lexical-1030r2","rum","missing_report","137",,,,,,"51.28","252.9","160.3","664.8","sberquad-pgvector-fts_rum-2026-10-1030r2.json","sha256:9d0774036470aea1978cdfb6f1197ae274c67199f4220cd8e854186206a99a01"
+"20261029-203458-lexical-1030r2","pgroonga","missing_report","1",,,,,,"48.87","243.34","101.2","707","sberquad-pgvector-pgroonga-2026-10-1030r2.json","sha256:896424f34e88a785be104e8abed7b6aa056cbfb4926a19d0833d8aa83fe0c809"
+"20261029-203458-lexical-1030r2","pg_trgm","missing_report","1",,,,,,"49.99","246.17","101.4","679.3","sberquad-pgvector-pg_trgm-2026-10-1030r2.json","sha256:d5cd84d81d795a924ed79acfc03406dc4e5633eac867eb9259e9ab1783f3ddcc"

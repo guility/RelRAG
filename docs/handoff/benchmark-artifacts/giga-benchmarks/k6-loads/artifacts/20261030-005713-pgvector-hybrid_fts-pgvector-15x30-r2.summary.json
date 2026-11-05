@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "run_id": "20261030-005713-pgvector-hybrid_fts-pgvector-15x30-r2",
+    "profile": "pgvector",
+    "route": "hybrid_fts",
+    "target_rps": 15,
+    "transactions_planned": 450,
+    "duration_seconds": 30,
+    "query_count": 200,
+    "seed": 20261029,
+    "pre_allocated_vus": 8,
+    "max_vus": 30
+  },
+  "metrics": {
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 2
+      }
+    },
+    "dropped_iterations": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "retrieval_sql_duration_ms": {
+      "values": {
+        "max": 151,
+        "p(90)": 106,
+        "p(95)": 121.5,
+        "p(99)": 137,
+        "avg": 95.74057649667405,
+        "min": 88,
+        "med": 92
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "data_sent": {
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "type": "counter"
+    },
+    "iterations": {
+      "values": {
+        "count": 451,
+        "rate": 14.987297907455083
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 8,
+        "value": 8,
+        "min": 8
+      }
+    },
+    "retrieval_result_rows": {
+      "values": {
+        "count": 45100,
+        "rate": 1498.7297907455084
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "data_received": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "iteration_duration": {
+      "contains": "time",
+      "values": {
+        "avg": 97.06726057206221,
+        "min": 88.799879,
+        "med": 93.197485,
+        "max": 153.329148,
+        "p(90)": 107.666488,
+        "p(95)": 124.077539,
+        "p(99)": 144.7819905
+      },
+      "type": "trend"
+    },
+    "retrieval_active_vus": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "avg": 2.0288248337028825,
+        "min": 1,
+        "med": 2,
+        "max": 3,
+        "p(90)": 2,
+        "p(95)": 2,
+        "p(99)": 3
+      }
+    },
+    "retrieval_load_errors": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 451
+      },
+      "thresholds": {
+        "rate==0": {
+          "ok": true
+        }
+      }
+    }
+  }
+}

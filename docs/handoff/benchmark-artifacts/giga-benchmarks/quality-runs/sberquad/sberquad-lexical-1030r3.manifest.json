@@ -1,0 +1,65 @@
+{
+  "schema_version": "v1",
+  "run_id": "20261029-204918-lexical-1030r3",
+  "run_label": "1030r3",
+  "candidates": [
+    "rum",
+    "pgroonga",
+    "pg_trgm"
+  ],
+  "started_utc": "2026-10-29T20:50:51.1684801+00:00",
+  "ended_utc": "2026-10-30T09:02:52.4910835+00:00",
+  "git_revision": "e7bbaf4fffdb1bcfd991c12fa02a65279991f913",
+  "worktree_dirty": true,
+  "dataset_manifest_sha256": "f4870a8e0555cc9b89e9a30a86f9db471f561efe5c10d98eda8025416710419b",
+  "database_image": "arag/postgres-lexical-benchmark@sha256:fa81c852f0ec1e3c26c3c303ef6308f54387fc8089bb503ac4cd9a25fe4d3bc7",
+  "database_image_ids": [
+    {
+      "candidate": "rum",
+      "image_id": ""
+    },
+    {
+      "candidate": "pgroonga",
+      "image_id": ""
+    },
+    {
+      "candidate": "pg_trgm",
+      "image_id": "sha256:fa81c852f0ec1e3c26c3c303ef6308f54387fc8089bb503ac4cd9a25fe4d3bc7"
+    }
+  ],
+  "resource_envelope": {
+    "per_stand_cpu": "3 vCPU",
+    "per_stand_memory": "6 GiB",
+    "stands_in_wave": 3,
+    "max_parallel_stands": 3,
+    "shared_gpu_cpu": "3.5 vCPU",
+    "shared_gpu_memory": "8 GiB",
+    "shared_gateway_cpu": "1 vCPU",
+    "shared_gateway_memory": "2 GiB",
+    "current_wave_cpu": "13.5 vCPU",
+    "current_wave_memory": "28 GiB",
+    "max_wave_cpu": "13.5 vCPU",
+    "max_wave_memory": "28 GiB"
+  },
+  "runner_image_ids": [
+    {
+      "candidate": "rum",
+      "image_id": "sha256:cff9fd7d28a7fb90beffc9e07170f4151f2f0a0de187658ad47c6ba4698bc9f1"
+    },
+    {
+      "candidate": "pgroonga",
+      "image_id": "sha256:7b4077aa2d4e7c64e8ae172ca4846805de2abd9470f5ba30a23485c78abef264"
+    },
+    {
+      "candidate": "pg_trgm",
+      "image_id": "sha256:72cfde7f15c32ccb0ce6a25fba42439e641cc8eb8eb1b816f7c1991c239cacc5"
+    }
+  ],
+  "reports": [
+    "sberquad-pgvector-fts_rum-2026-10-1030r3.json",
+    "sberquad-pgvector-pgroonga-2026-10-1030r3.json",
+    "sberquad-pgvector-pg_trgm-2026-10-1030r3.json"
+  ],
+  "resources_csv": "sberquad-lexical-1030r3.resources.csv",
+  "summary_csv": "sberquad-lexical-1030r3.summary.csv"
+}

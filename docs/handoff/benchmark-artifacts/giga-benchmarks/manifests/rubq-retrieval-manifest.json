@@ -1,0 +1,88 @@
+{
+  "schema_version": "v1",
+  "status": "source_pinned_results_pending",
+  "loader": "mteb_parquet",
+  "benchmark": "ruMTEB RuBQRetrieval",
+  "language": "ru",
+  "split": "test",
+  "expected_query_count": 1692,
+  "expected_qrels_rows": 2845,
+  "expected_corpus_count": 56826,
+  "relevance": "source qrels scores; preserve graded values",
+  "dataset": {
+    "repository": "mteb/RuBQRetrieval",
+    "revision": "7229066ed7a617ef50aad51c5a2d95957eaee537",
+    "license": "CC-BY-SA-4.0",
+    "source": "ruMTEB retrieval task derived from RuBQ 2.0",
+    "files": [
+      {
+        "role": "corpus",
+        "path": "corpus/test/0000.parquet",
+        "rows": 56826,
+        "bytes": 24095774,
+        "sha256": "3a05162fe105821f2adbdab2531059be326f5e4daf709a1ebb1c9398c9bbca40"
+      },
+      {
+        "role": "qrels",
+        "path": "qrels/test/0000.parquet",
+        "rows": 2845,
+        "bytes": 30547,
+        "sha256": "4a9d3229bdaa49bf550aad0ac93a383f520c2d42152b252d4afda626f24d791a"
+      },
+      {
+        "role": "queries",
+        "path": "queries/test/0000.parquet",
+        "rows": 1692,
+        "bytes": 83444,
+        "sha256": "67106005e1a021986220f72b806ac30827f06092e11b7415f4f4c8a0dd73e1bf"
+      }
+    ]
+  },
+  "preprocessing": {
+    "corpus_fields": ["id", "title", "text"],
+    "query_fields": ["id", "text"],
+    "qrels_fields": ["query-id", "corpus-id", "score"],
+    "document_serialization": "title and text joined with one newline; omit empty fields",
+    "query_serialization": "text unchanged",
+    "deduplication": "source corpus IDs are authoritative; reject duplicates",
+    "exclusions": []
+  },
+  "embedder": {
+    "model_id": "ai-sage/Giga-Embeddings-instruct-480M-0826",
+    "revision": "1763d603adac8057bd6482a708001b0ed2e0a903",
+    "license": "MIT",
+    "dimensions": 1024,
+    "document_input": "serialized title and paragraph, unprefixed",
+    "query_input_template": "Instruct: Given a query, retrieve relevant passages\nQuery: {query}",
+    "device": "cuda",
+    "dtype": "float32",
+    "precision": "float16->float32",
+    "execution_mode": "torch_compile_dynamic",
+    "normalization": "L2"
+  },
+  "metrics": {
+    "primary": "nDCG@10",
+    "secondary": ["MAP@10", "Recall@100", "MRR@10", "latency_ms", "CPU", "RAM", "GPU", "VRAM", "index_build_seconds"]
+  },
+  "repeatability": {
+    "seed": 20261029,
+    "runs_per_candidate": 3,
+    "candidate_order": "rotate by run seed; rebuild isolated database per candidate"
+  },
+  "resource_envelope": {
+    "scope": "benchmark_and_development_only",
+    "max_vcpu": 16,
+    "max_memory_gib": 32,
+    "production_capacity_claim": false
+  },
+  "network_policy": {
+    "download": "compose_download_profile_only",
+    "model_inference": "shared_local_gpu_service_no_egress",
+    "benchmark_data": "local_compose_volume_not_versioned"
+  },
+  "references": {
+    "task": "https://leaderboard.mteb.org/tasks",
+    "dataset": "https://huggingface.co/datasets/mteb/RuBQRetrieval",
+    "source_benchmark": "https://github.com/vladislavneon/RuBQ"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": "v1",
+  "status": "inputs_verified_results_pending",
+  "benchmark": "rusBEIR SberQUAD-retrieval",
+  "language": "ru",
+  "split": "test",
+  "expected_query_count": 23936,
+  "expected_corpus_count": 17474,
+  "relevance": "binary",
+  "input_fields": {
+    "corpus": ["processed_title", "processed_text"],
+    "query": ["processed_title", "processed_text"],
+    "empty_fields": "omit; join remaining title and text with one newline"
+  },
+  "datasets": [
+    {
+      "role": "corpus_and_queries",
+      "repository": "kaengreg/sberquad-retrieval",
+      "revision": "16f9539da18c86f2a5f91e369c8ca6c2add2075f",
+      "license": "MIT",
+      "files": [
+        {
+          "name": "corpus.jsonl",
+          "rows": 17474,
+          "bytes": 45661956,
+          "sha256": "d3b2a2a9d10767f850650d5a8cfa9f8e702e0c2dde3239b02860b3ee21a0675b"
+        },
+        {
+          "name": "queries.jsonl",
+          "rows": 74300,
+          "bytes": 22420917,
+          "sha256": "d2dd4ae52d995e1096f934c48431d3a505ce21eabbcbb379412348f52c6685b5"
+        }
+      ]
+    },
+    {
+      "role": "relevance_judgments",
+      "repository": "kaengreg/sberquad-retrieval-qrels",
+      "revision": "ceac8190a0bddd2aee07d44cc65a01223b558d72",
+      "license": "MIT",
+      "split": "test.tsv",
+      "rows_excluding_header": 23936,
+      "bytes": 335129,
+      "sha256": "a1f0e4f5fefe9b0344d452ea04c0cb29ebd51b9fc16ddce7b5e4b4880859e2d6",
+      "columns": ["query-id", "corpus-id", "score"]
+    }
+  ],
+  "embedder": {
+    "model_id": "ai-sage/Giga-Embeddings-instruct-480M-0826",
+    "revision": "1763d603adac8057bd6482a708001b0ed2e0a903",
+    "license": "MIT",
+    "dimensions": 1024,
+    "document_input": "processed passage text, unprefixed",
+    "query_input_template": "Instruct: Given a query, retrieve relevant passages\nQuery: {query}",
+    "device": "cuda",
+    "dtype": "float32",
+    "precision": "float16->float32",
+    "execution_mode": "torch_compile_dynamic",
+    "normalization": "L2"
+  },
+  "metrics": {
+    "primary": "nDCG@10",
+    "secondary": ["MAP@10", "Recall@100", "MRR@10"]
+  },
+  "repeatability": {
+    "seed": 20261029,
+    "bootstrap_iterations": 500,
+    "query_order": "pinned official test split input order"
+  },
+  "resource_envelope": {
+    "scope": "benchmark_and_development_only",
+    "max_vcpu": 16,
+    "target_memory_gib": 32,
+    "max_memory_gib": 48,
+    "production_capacity_claim": false
+  },
+  "network_policy": {
+    "download": "compose_download_profile_only",
+    "model_inference": "shared_local_gpu_service_via_litellm_no_egress",
+    "benchmark_data": "local_compose_volume_not_versioned"
+  },
+  "references": {
+    "benchmark": "https://github.com/kaengreg/rusBeIR",
+    "corpus_and_queries": "https://huggingface.co/datasets/kaengreg/sberquad-retrieval",
+    "qrels": "https://huggingface.co/datasets/kaengreg/sberquad-retrieval-qrels",
+    "embedder": "https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826"
+  }
+}

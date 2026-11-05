@@ -1,0 +1,117 @@
+{
+  "schema_version": "v1",
+  "status": "source_pinned_streaming_profile_pending",
+  "loader": "miracl_streaming",
+  "benchmark": "MIRACL v1.0 Russian retrieval",
+  "language": "ru",
+  "split": "dev",
+  "expected_query_count": 1252,
+  "expected_qrels_rows": 13100,
+  "expected_corpus_count": 9543918,
+  "relevance": "TREC qrels; preserve positive and zero judgments in source audit",
+  "corpus": {
+    "repository": "miracl/miracl-corpus",
+    "revision": "a7362f0b9d54dce8a8af3cd42a8cf2a5ef570475",
+    "license": "Apache-2.0",
+    "path_prefix": "miracl-corpus-v1.0-ru/",
+    "format": "gzip-compressed JSONL",
+    "shards": [
+      {"path": "docs-0.jsonl.gz", "sha256": "699b5ee09f2be4afcf787637602d87ce9cf86156ac6d52e40a5af4044f4c5ed8"},
+      {"path": "docs-1.jsonl.gz", "sha256": "c2c611d61905988484e9fd4019146a3d3e1fc23cbef36079a766860d65522262"},
+      {"path": "docs-2.jsonl.gz", "sha256": "8842fda047c88bd609fc2e346d4a150be764715f26bc04ccfb6bcdce109f6a16"},
+      {"path": "docs-3.jsonl.gz", "sha256": "84b986cfddc875c43aaee9b4f5feb1bb0fed75a38fe7c22114474ef9ba2dc530"},
+      {"path": "docs-4.jsonl.gz", "sha256": "fb807d21d62e71602d6bb6c720f4991b1fb1984f1582ebf0918308d8f8c6fc8c"},
+      {"path": "docs-5.jsonl.gz", "sha256": "2f36e35b8181e18ea1839a1770aafa146ffbfee697a518a9befd502cca75ab47"},
+      {"path": "docs-6.jsonl.gz", "sha256": "6f024330ffcd2a99c9d60e396275b3d6174406260779693c004e59abdb40a6d9"},
+      {"path": "docs-7.jsonl.gz", "sha256": "6d0d631753a1c8bf3aad78b2fb77e6d813fc588444457bed974ed77a3139b471"},
+      {"path": "docs-8.jsonl.gz", "sha256": "c4a9d0bfc5093c25f533648a6ee24fdddc05876a8c780e86505eb7465abde4a1"},
+      {"path": "docs-9.jsonl.gz", "sha256": "2224fcf093a0d96203228fa03a69d1002b7950d15b6984400c7674dac194aea4"},
+      {"path": "docs-10.jsonl.gz", "sha256": "d42cf2abe388135efb8c51199dfa2666d99f9206ce16468da5a2cae226077479"},
+      {"path": "docs-11.jsonl.gz", "sha256": "f0ad276a1d7a1f78bb9825e38a18cb3444b3477be775b21852409f3a0997418d"},
+      {"path": "docs-12.jsonl.gz", "sha256": "d342158c26ceaf7afa0aa0dc9a84615358d5176b9be69211a8ee6cac1d18bc7f"},
+      {"path": "docs-13.jsonl.gz", "sha256": "3dbc7963a3de84babe89eb9d0d4761291ea76ffa57e546a6486da6d334cb1baf"},
+      {"path": "docs-14.jsonl.gz", "sha256": "a925a0b9270269ed5012ad0cdb803140edbdfb38e86c798d0666633dde495289"},
+      {"path": "docs-15.jsonl.gz", "sha256": "bf5948805fc0a8b5c3d064fd4ecaa98e915c20f1d144eaa1f6cef8ed581702f8"},
+      {"path": "docs-16.jsonl.gz", "sha256": "aa4f3665fecfb3cce4f93f8cc09a81a9214e53d77612350f831c157b417cde40"},
+      {"path": "docs-17.jsonl.gz", "sha256": "297506bf253de9aa4c459741aad32a86d753d3849f87b1d365c412010b9b7c10"},
+      {"path": "docs-18.jsonl.gz", "sha256": "85b096e858899c245188a7682ed1a41d8ff4eb03865ef6531ceb0019b8aeb45f"},
+      {"path": "docs-19.jsonl.gz", "sha256": "d74cfbbfd614ff59ea9f146b73d3eb3fd23899b4a649cc77af6d38973fe2d7a5"}
+    ],
+    "expected_compressed_size_gib_approx": 1.47
+  },
+  "topics_and_qrels": {
+    "repository": "miracl/miracl",
+    "revision": "b88e5810a209346466a934f2fbfa5427192ca348",
+    "license": "Apache-2.0",
+    "topics_path": "miracl-v1.0-ru/topics/topics.miracl-v1.0-ru-dev.tsv",
+    "qrels_path": "miracl-v1.0-ru/qrels/qrels.miracl-v1.0-ru-dev.tsv",
+    "format": "topics TSV; qrels TREC four-column text",
+    "topics_sha256": "91a7c3b6d21f79a12b5330f0a62811962f9370a0bf539cba8b3fecaa095f0616",
+    "topics_bytes": 108525,
+    "topics_rows": 1252,
+    "qrels_sha256": "f877b43c7f53b76aab25e406e5a607ef1c5adba4ffaa11e1b252a4326735a19b",
+    "qrels_bytes": 255921,
+    "qrels_rows": 13100
+  },
+  "preprocessing": {
+    "corpus_fields": ["docid", "title", "text"],
+    "query_fields": ["qid", "query"],
+    "qrels_fields": ["qid", "Q0", "docid", "relevance"],
+    "document_serialization": "title and passage text joined with one newline; omit empty fields",
+    "query_serialization": "query unchanged",
+    "shard_order": "numeric docs-N order",
+    "deduplication": "none; reject duplicate source docid across shards",
+    "exclusions": []
+  },
+  "embedder": {
+    "model_id": "ai-sage/Giga-Embeddings-instruct-480M-0826",
+    "revision": "1763d603adac8057bd6482a708001b0ed2e0a903",
+    "license": "MIT",
+    "dimensions": 1024,
+    "max_sequence_tokens": 8192,
+    "overlength_policy": "truncate_at_max_sequence_tokens",
+    "document_input": "serialized title and passage, unprefixed",
+    "query_input_template": "Instruct: Given a query, retrieve relevant passages\nQuery: {query}",
+    "device": "cuda",
+    "dtype": "float32",
+    "precision": "float16->float32",
+    "execution_mode": "torch_compile_dynamic",
+    "normalization": "L2"
+  },
+  "metrics": {
+    "primary": "nDCG@10",
+    "exact_recall_sample_size": 20,
+    "secondary": ["MAP@10", "Recall@100", "MRR@10", "latency_ms", "CPU", "RAM", "GPU", "VRAM", "insert_seconds", "index_build_seconds", "index_bytes"]
+  },
+  "repeatability": {
+    "seed": 20261029,
+    "runs_per_candidate": 3,
+    "candidate_order": "rotate by run seed; isolated database per candidate"
+  },
+  "resource_envelope": {
+    "scope": "benchmark_scale_profile_only",
+    "max_vcpu": 16,
+    "target_memory_gib": 32,
+    "max_memory_gib": 32,
+    "production_capacity_claim": false,
+    "profile": "serial candidates, shared GPU embedder, bounded streaming batches",
+    "raw_vector_cache_minimum_gib": 36.4,
+    "disk_preflight_required": true
+  },
+  "execution_prerequisites": [
+    "streaming corpus parsing and embedding into a persistent disk-backed cache",
+    "batched PostgreSQL insert from disk-backed vectors without materializing the corpus or vector matrix in RAM",
+    "Compose aggregate resource proof at or below 16 vCPU / 32 GiB",
+    "frozen SHA-256 for topics and qrels; CSV report and failure/degradation classification"
+  ],
+  "network_policy": {
+    "download": "compose_download_profile_only",
+    "model_inference": "shared_local_gpu_service_no_egress",
+    "benchmark_data": "local_compose_volume_not_versioned"
+  },
+  "references": {
+    "benchmark": "https://github.com/project-miracl/miracl",
+    "corpus": "https://huggingface.co/datasets/miracl/miracl-corpus/tree/main/miracl-corpus-v1.0-ru",
+    "topics_and_qrels": "https://huggingface.co/datasets/miracl/miracl/tree/b88e5810a209346466a934f2fbfa5427192ca348/miracl-v1.0-ru"
+  }
+}
