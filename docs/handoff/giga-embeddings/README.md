@@ -106,6 +106,42 @@ Runner проверяет provenance, размеры массивов и SHA-256
 
 Отдельные model/cache volumes: `arag-stage0_giga_model_files_v1` для snapshot и `arag-stage0_sberquad_vectors_cache_v1` для массивов benchmark-векторов. Имя cache volume сохранено, чтобы использовать его совместно с существующими ARAG benchmark Compose runners.
 
+## Можно ли восстановить точь-в-точь векторные кэши тестов?
+
+**Короткий ответ: настроить тот же сервис можно; подтвердить побайтное совпадение всех исторических cache-файлов по текущему handoff нельзя.** Handoff не хранит сами `.npy` массивы и их исходные SHA-256. Для SberQUAD и RuBQ отчёты фиксируют `cache_hit` и `embedding_seconds`, но не `cache_key` и digest массивов. Для MIRACL cache builder умеет записывать key и hashes в `manifest.json`, однако итоговый cache manifest от исторического прогона не включён в артефакты handoff.
+
+| Датасет | Закреплённые входы | Получение данных и построение cache с нуля |
+|---|---|---|
+| SberQUAD | `$ARAG_ROOT/docs/architecture/catalog/data/giga-benchmarks/manifests/sberquad-retrieval-manifest.json`: Hugging Face revisions, размеры и SHA-256 корпуса, запросов и qrels. Ожидаемые пути под `/models/benchmark/sberquad`: `corpus/corpus.jsonl`, `corpus/queries.jsonl`, `qrels/test.tsv`. | В текущем ARAG Compose нет downloader-а SberQUAD или отдельного cache-only runner-а. Benchmark service требует `--require-existing-cache`; cache miss не создаст cache через этот preset. Точные команды для проверенного download/cache-only пути пока не закреплены. |
+| RuBQRetrieval | `$ARAG_ROOT/docs/architecture/catalog/data/giga-benchmarks/manifests/rubq-retrieval-manifest.json`: `mteb/RuBQRetrieval` на закреплённой ревизии и SHA-256 трёх Parquet-файлов. | `rubq-dataset-download` проверяет pinned файлы и сохраняет их в `arag-stage0_rubq_dataset_v1`. Но benchmark preset также требует уже существующий vector cache; отдельного cache-only runner-а для RuBQ сейчас нет. |
+| MIRACL Russian | `$ARAG_ROOT/docs/architecture/catalog/data/giga-benchmarks/manifests/miracl-ru-scale-manifest.json`: pinned corpus shards, topics и qrels с SHA-256. | Есть проверенные `miracl-dataset-download` и `miracl-vector-cache`. Cache builder использует batch size 64, checkpoint/resume и публикует cache key, размеры и SHA-256 в своём cache `manifest.json`. |
+
+### Воспроизводимая команда для MIRACL
+
+Сначала запустить downloader модели из каталога handoff, затем выполнить два cache этапа из **checkout ARAG**. Путь `deploy/composes/tests/compose.stage0.yaml` ниже относится только к ARAG checkout; это не файл RelRAG и standalone Giga Compose выше от него не зависит.
+
+```bash
+export ARAG_ROOT=/work/ARAG
+bash /work/RelRAG/docs/handoff/giga-embeddings/run.sh download
+
+cd "$ARAG_ROOT"
+docker compose --project-directory "$ARAG_ROOT" \
+  -f deploy/composes/tests/compose.stage0.yaml \
+  --profile benchmark-miracl-download run --build --rm miracl-dataset-download
+
+docker compose --project-directory "$ARAG_ROOT" \
+  -f deploy/composes/tests/compose.stage0.yaml \
+  --profile benchmark-miracl-embedding run --build --rm miracl-vector-cache
+```
+
+Данные MIRACL будут в named volume `arag-stage0_miracl_dataset_v1`; массивы — в `arag-stage0_sberquad_vectors_cache_v1/<cache_key>/{documents.npy,queries.npy,manifest.json}`. Manifest cache после сборки нужно сохранить вместе с run metadata: он содержит контрольные суммы самих векторов. Не удаляйте volumes между cache build и retrieval.
+
+### Почему повторное вычисление не означает byte-for-byte идентичность
+
+Обычная SberQUAD/RuBQ cache identity включает pinned manifest inputs, модель и SHA-256 файлов модели, query template, режимы и количество записей. Она не фиксирует CUDA driver, GPU architecture и HTTP batch size. У MIRACL batch size входит в identity, но GPU/driver provenance всё равно не закреплён. Выход — FP32 после FP16 GPU inference и dynamic `torch.compile`; на другом GPU/driver побайтное равенство не гарантируется. Checksum, записанный в новом cache manifest, подтверждает целостность этого нового cache, но не совпадение с историческим.
+
+Чтобы handoff позволял проверить именно совпадение с историческими массивами, нужно сохранить одно из двух: исходный volume `arag-stage0_sberquad_vectors_cache_v1` целиком либо `documents.npy`, `queries.npy`, cache `manifest.json` и для каждого прогона чистый commit/diff исходников, image IDs, GPU model/compute capability, driver/CUDA и фактический batch size. Сейчас эти исторические cache SHA и полный runtime provenance в handoff не заархивированы. Поэтому старый cache можно повторно использовать при сохранённом volume; заново вычислить его по зафиксированной спецификации можно, но заявлять точное совпадение байтов нельзя.
+
 ## Ограничения, оптимизации и метрики
 
 - Ресурсные квоты: downloader 1 CPU / 2 GiB, GPU embedder 4 CPU / 10 GiB, LiteLLM gateway 1 CPU / 2 GiB. Учтите их вместе с runner и PostgreSQL в пределах согласованного общего лимита 16 vCPU / 32 GiB.
