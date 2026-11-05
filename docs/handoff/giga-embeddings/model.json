@@ -1,0 +1,25 @@
+{
+  "model_id": "ai-sage/Giga-Embeddings-instruct-480M-0826",
+  "revision": "1763d603adac8057bd6482a708001b0ed2e0a903",
+  "license": "mit",
+  "dimensions": 1024,
+  "max_sequence_tokens": 8192,
+  "pooling": "mean",
+  "normalized": true,
+  "artifact_sha256": {
+    "1_Pooling/config.json": "39843b49282a69b60b0ce46529f6cb744d2905b2ab9baf3e244251dc0c61fb80",
+    "2_Normalize/config.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "README.md": "c02ae1f0cd8fa7fe335ce3d1a9f50b52dd036ba9e936f4fe9025368571e4d972",
+    "config.json": "99968b29efb4dafdd3ba88da19677a2b7046b6c761d8f9deb078c4eed49ddfeb",
+    "config_sentence_transformers.json": "63ab8ab57df89362caafa22dd7d82d8642b8a6fb18e617387618b7ec33a8ef98",
+    "configuration_gigarembed.py": "96e135d1ca3ae77d456b7bbc4973d74277b495f3e664e0c12855f2d642e14b5d",
+    "model.safetensors": "9ce03c6c5ae02baebb42ce3015b6f3e628c5fec7b7745bc2490f6ff961a654a5",
+    "modeling_gigarembed.py": "2e3160131a46ab8a65649d514a84fc2a2002404c106c2e81548883c062a63418",
+    "modules.json": "21ddb3037a55ebf4549eb5c1dc44c3f28f10b56ec7f1335c92fd90e5b30d88ac",
+    "sentence_bert_config.json": "23aa234ef6021d513cdf56947c07aaa6977000d85dcd1fd423f650b3382a39ca",
+    "special_tokens_map.json": "82d96d7a9e6ced037f12394b7ea6a5b02e6ca87e0d11edaa8d60d9be857ce7db",
+    "tokenizer.json": "0870f9c0f06a677f7e939e7765ae3a5d9582f2a6d7e7258176ecd1a3eab96cef",
+    "tokenizer_config.json": "57981f331fd010c7be87f58e7570b2061dd14d98be53063ad8972e9c4db0b644"
+  }
+}
+
