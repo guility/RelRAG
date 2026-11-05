@@ -43,8 +43,8 @@ Volume модели отделён от `arag-stage0_sberquad_vectors_cache_v1`,
 - FP16 веса на CUDA и нормализованный FP32 output; TF32 выключен; динамический `torch.compile(mode="default", dynamic=True)`.
 - GPU microbatch адаптивно ограничен бюджетом attention cells (64 × 3 000²), максимум 64 строки. При reserved CUDA memory >25 GiB чистятся неактивные allocator blocks. Один instance сериализует inference lock-ом.
 - Лимиты: embedder 4 CPU / 10 GiB RAM; LiteLLM 1 CPU / 2 GiB; MIRACL precompute runner 1 CPU / 2 GiB. Root FS read-only, временные кэши ограничены, сеть сервиса внутренняя, capabilities сброшены.
-- Batch sweep `quality-runs/giga-batch-size/1101r2`: batch 64 дал 1 479,65 текстов/с в трёх повторах на коротких синтетических текстах; это не MIRACL throughput.
-- MIRACL sample `quality-runs/giga-optimization/1101r6`: batch 64 с length bucketing — 706,1 против 293,6 текстов/с, top-10 overlap 99,45%. Bucketing замерялся в отдельном precompute runner и пока не включён в HTTP-сервис. Перед интеграцией повторить проверку порядка, retrieval quality и параллельной нагрузки.
+- `quality-runs/giga-batch-size/1101r2/run_batch_size_sweep.py` и `compose.batch-sweep.yaml`: batch 64 дал 1 479,65 текстов/с в трёх повторах на коротких синтетических текстах; это не MIRACL throughput.
+- `quality-runs/giga-optimization/1101r6/run_miracl_length_bucketing.py` и `compose.miracl-length-bucketing.yaml`: batch 64 с length bucketing — 706,1 против 293,6 текстов/с, top-10 overlap 99,45%. Bucketing замерялся в отдельном precompute runner и пока не включён в HTTP-сервис. Перед интеграцией повторить проверку порядка, retrieval quality и параллельной нагрузки.
 - Snapshot SHA-256 из `/healthz`: `60463aff43bceea15fd4f44d84fbe9e89e37b9abc97d3dbc461648d0835414e8`.
 
 Linux-прогоны получают отдельный host profile и не смешиваются с WSL2 без парных запусков. Resource admission учитывает общий GPU-сервис, gateway, runners и базы в пределах 16 vCPU / 32 GiB. Security checks остаются quality gate; открытые findings должны оставаться видимыми, профиль benchmark-only.
