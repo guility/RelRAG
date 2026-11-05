@@ -1,0 +1,4 @@
+name: arag-stage0
+
+include:
+  - path: ${ARAG_ROOT}/deploy/composes/tests/compose.stage0.yaml
