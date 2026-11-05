@@ -1,5 +1,153 @@
 name: arag-stage0
 
-include:
-  - path: ${ARAG_ROOT}/deploy/composes/tests/compose.stage0.yaml
-    project_directory: ${ARAG_ROOT}
+# Самодостаточная GPU-служба для handoff. Не подключает отсутствующий в RelRAG
+# compose.stage0.yaml; ARAG_ROOT указывает только на исходное дерево ARAG,
+# необходимое для сборки закреплённых Dockerfile и lock-файлов.
+services:
+  giga-download:
+    profiles: [giga-embeddings]
+    build:
+      context: "${ARAG_ROOT:?Set ARAG_ROOT to ARAG source checkout}"
+      dockerfile: deploy/Dockerfiles/models/Dockerfile.giga
+      target: runner
+    working_dir: /workspace
+    entrypoint: [python, /workspace/scripts/v3/giga_embeddings/download_model.py]
+    network_mode: bridge
+    read_only: true
+    tmpfs: [/tmp]
+    environment:
+      HF_HUB_DISABLE_XET: "1"
+      HF_HUB_DOWNLOAD_TIMEOUT: "120"
+    cpus: 1
+    mem_limit: 2g
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - giga_model_files_v1:/models
+
+  giga-embedding:
+    profiles:
+      - giga-embeddings
+      - benchmark-pgvector
+      - benchmark-vectorchord
+      - benchmark-pgsearch
+      - benchmark-pgvectorscale
+      - benchmark-rubq
+      - benchmark-lexical-rum
+      - benchmark-lexical-gist
+      - benchmark-lexical-pgroonga
+      - benchmark-lexical-trgm
+      - benchmark-lexical-bigm
+      - benchmark-miracl-embedding
+    build:
+      context: "${ARAG_ROOT:?Set ARAG_ROOT to ARAG source checkout}"
+      dockerfile: deploy/Dockerfiles/models/Dockerfile.giga-gpu
+      target: model
+    command: [--model-dir, /models/giga, --host, 0.0.0.0, --port, "8000"]
+    environment:
+      GIGA_CPU_LIMIT: "4"
+      GIGA_EMBEDDING_API_KEY: "${GIGA_EMBEDDING_API_KEY:-arag-local-giga-benchmark-only}"
+      TORCHINDUCTOR_CACHE_DIR: /torch-inductor
+      HOME: /tmp/home
+      HF_HOME: /tmp/huggingface
+      HF_HUB_CACHE: /models/hub
+      HF_HUB_OFFLINE: "1"
+      HF_MODULES_CACHE: /tmp/huggingface/modules
+      TRANSFORMERS_OFFLINE: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      XDG_CACHE_HOME: /tmp/cache
+      TORCH_HOME: /tmp/torch
+      CUDA_CACHE_PATH: /tmp/cuda-cache
+      TRITON_CACHE_DIR: /triton
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /torch-inductor:rw,exec,nosuid,nodev,size=4g
+      - /triton:rw,exec,nosuid,nodev,size=1g
+    cpus: 4
+    mem_limit: 10g
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - giga_model_files_v1:/models:ro
+    networks: [giga_inference]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=2)); assert data['device']=='cuda' and data['precision']=='float16->float32' and data['execution_mode']=='torch_compile_dynamic'"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 240s
+
+  litellm-gateway:
+    profiles:
+      - giga-embeddings
+      - benchmark-pgvector
+      - benchmark-vectorchord
+      - benchmark-pgsearch
+      - benchmark-pgvectorscale
+      - benchmark-rubq
+      - benchmark-lexical-rum
+      - benchmark-lexical-gist
+      - benchmark-lexical-pgroonga
+      - benchmark-lexical-trgm
+      - benchmark-lexical-bigm
+      - benchmark-miracl-embedding
+    build:
+      context: "${ARAG_ROOT:?Set ARAG_ROOT to ARAG source checkout}"
+      dockerfile: deploy/Dockerfiles/models/Dockerfile.giga-gpu
+      target: gateway
+    command: [--config, /etc/litellm/giga-embeddings.yaml, --port, "4000"]
+    environment:
+      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:-arag-local-giga-benchmark-only}"
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
+    read_only: true
+    tmpfs: [/tmp]
+    cpus: 1
+    mem_limit: 2g
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - "${ARAG_ROOT:?Set ARAG_ROOT to ARAG source checkout}/deploy/litellm/giga-embeddings.yaml:/etc/litellm/giga-embeddings.yaml:ro"
+    depends_on:
+      giga-embedding:
+        condition: service_healthy
+    networks: [arag_test, giga_inference]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness',timeout=2)"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+networks:
+  giga_inference:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${ARAG_GIGA_INFERENCE_SUBNET:-10.250.0.0/24}
+  arag_test:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${ARAG_TEST_SUBNET:-10.251.0.0/24}
+
+volumes:
+  giga_model_files_v1:
+    name: arag-stage0_giga_model_files_v1
+  sberquad_vectors_cache_v1:
+    name: arag-stage0_sberquad_vectors_cache_v1
