@@ -1,17 +1,17 @@
-# GigaEmbeddings: Linux benchmark handoff
+# GigaEmbeddings: handoff для Linux-бенчмарков
 
-**State:** reproducible benchmark profile; no production embedder or PostgreSQL backend has been selected. This folder lives in the RelRAG handoff branch. Its commands use the ARAG source checkout through `ARAG_ROOT`; the source tree remains authoritative for implementation.
+**Статус:** воспроизводимый benchmark-профиль; production embedder и PostgreSQL backend не выбраны. Эта папка находится в handoff-ветке RelRAG. Для запуска нужен checkout исходного ARAG, указанный через `ARAG_ROOT`; каноническими остаются его код и Compose-конфигурация.
 
-## Weights and model lock
+## Веса и фиксация модели
 
-- Public model: [ai-sage/Giga-Embeddings-instruct-480M-0826](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826).
-- Pinned snapshot: [revision 1763d603adac8057bd6482a708001b0ed2e0a903](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826/tree/1763d603adac8057bd6482a708001b0ed2e0a903); direct [model.safetensors](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826/resolve/1763d603adac8057bd6482a708001b0ed2e0a903/model.safetensors).
-- `model.json` records the revision and expected SHA-256 for every model artifact. The service checks these hashes before loading the local snapshot.
-- The download task writes to the named volume `arag-stage0_giga_model_files_v1`; inference then runs with Hugging Face and Transformers offline. Do not commit weights or vectors.
+- Публичная модель: [ai-sage/Giga-Embeddings-instruct-480M-0826](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826).
+- Зафиксированный snapshot: [revision 1763d603adac8057bd6482a708001b0ed2e0a903](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826/tree/1763d603adac8057bd6482a708001b0ed2e0a903); прямой [model.safetensors](https://huggingface.co/ai-sage/Giga-Embeddings-instruct-480M-0826/resolve/1763d603adac8057bd6482a708001b0ed2e0a903/model.safetensors).
+- `model.json` содержит revision и SHA-256 каждого ожидаемого файла. Сервис проверяет хэши перед загрузкой локального snapshot.
+- Загрузчик сохраняет модель в named volume `arag-stage0_giga_model_files_v1`; inference выполняется offline. Не добавлять веса и векторные кэши в git.
 
-## Start and stop
+## Запуск и остановка
 
-Requirements: Linux Docker Engine, Docker Compose v2 with `include` support, NVIDIA Container Toolkit, and a GPU visible to Docker.
+Нужны Linux Docker Engine, Docker Compose v2 с поддержкой `include`, NVIDIA Container Toolkit и GPU, доступная Docker.
 
 ```bash
 ARAG_ROOT=/path/to/arag bash docs/handoff/giga-embeddings/run.sh up
@@ -19,32 +19,32 @@ ARAG_ROOT=/path/to/arag bash docs/handoff/giga-embeddings/run.sh status
 ARAG_ROOT=/path/to/arag bash docs/handoff/giga-embeddings/run.sh down
 ```
 
-`up` downloads the pinned snapshot, then builds and starts the shared GPU embedder and LiteLLM gateway. `down` stops only those two services and preserves named volumes. `compose.yaml` includes the canonical ARAG Compose project rather than copying service definitions. Key source files:
+`up` скачивает закреплённый snapshot, собирает и запускает общий GPU embedder и LiteLLM gateway. `down` останавливает только эти сервисы и сохраняет volumes. `compose.yaml` подключает канонический Compose-проект ARAG, не копируя определения сервисов. Основные файлы исходного дерева:
 
-- `deploy/composes/tests/compose.stage0.yaml` — Compose project and includes.
-- `deploy/composes/stage0/giga.yaml` — one-time model download, volume, CPU utility benchmark.
-- `deploy/composes/stage0/inference/giga-inference.yaml` — shared GPU service and gateway, resource/security/network settings.
-- `deploy/Dockerfiles/models/Dockerfile.giga-gpu`, `deploy/locks/giga-gpu/pyproject.toml`, `deploy/locks/giga-gpu/uv.lock` — pinned runtime.
-- `deploy/litellm/giga-embeddings.yaml` — model aliases and gateway configuration.
-- `scripts/v3/giga_embeddings/{server.py,compiled_inference.py,service.py,service_limits.py}` — verified local inference API.
-- `scripts/v3/retrieval_benchmark/embedding/{model.py,gateway.py,cache.py}` — runner connection and content-addressed vector cache.
+- `deploy/composes/tests/compose.stage0.yaml` — Compose проект и его includes.
+- `deploy/composes/stage0/giga.yaml` — загрузка модели, volume и CPU utility benchmark.
+- `deploy/composes/stage0/inference/giga-inference.yaml` — GPU-сервис, gateway, лимиты ресурсов и сетевые настройки.
+- `deploy/Dockerfiles/models/Dockerfile.giga-gpu`, `deploy/locks/giga-gpu/pyproject.toml`, `deploy/locks/giga-gpu/uv.lock` — runtime с закреплёнными зависимостями.
+- `deploy/litellm/giga-embeddings.yaml` — псевдонимы моделей и настройки gateway.
+- `scripts/v3/giga_embeddings/{server.py,compiled_inference.py,service.py,service_limits.py}` — проверяемый локальный API inference.
+- `scripts/v3/retrieval_benchmark/embedding/{model.py,gateway.py,cache.py}` — подключение runners и content-addressed cache векторов.
 
-## Runner path and cache
+## Связь runners и кэш
 
-A single Compose service keeps the model on the GPU. Runners connect over internal Compose DNS: the usual route is runner → `litellm-gateway:4000/v1/embeddings` → `giga-embedding:8000/v1/embeddings`. LiteLLM exposes `giga-document-v1` and `giga-query-v1`; its response cache and message logging are disabled. MIRACL precompute uses the authenticated internal `giga-embedding:8000/internal/v1/embeddings` route, which returns ordered FP32 vectors in a compact binary response. No public ports are published.
+Один Compose-сервис держит модель на GPU. Runners подключаются по внутренним Compose DNS-именам: стандартный маршрут — runner → `litellm-gateway:4000/v1/embeddings` → `giga-embedding:8000/v1/embeddings`. LiteLLM предоставляет `giga-document-v1` и `giga-query-v1`; его response cache и логирование сообщений отключены. MIRACL precompute идёт через аутентифицированный внутренний адрес `giga-embedding:8000/internal/v1/embeddings`, возвращающий упорядоченные FP32-векторы в компактном бинарном ответе. Публичные порты не публикуются.
 
-Documents are encoded raw. Queries use `Instruct: Given a query, retrieve relevant passages\nQuery: {query}`. API bounds are 64 texts per batch, 16 MiB per request, 8,192 tokens per text, and 1,024 dimensions. The runner passes a bearer credential through environment configuration; the checked-in Compose value is synthetic benchmark-only data, not a production secret.
+Документы кодируются без инструкции. Для запросов применяется шаблон `Instruct: Given a query, retrieve relevant passages\nQuery: {query}`. Ограничения API: до 64 текстов и 16 MiB на запрос, до 8 192 токенов на текст и размерность 1 024. Runner передаёт bearer credential через конфигурацию окружения; текущее Compose-значение синтетическое и предназначено только для benchmark.
 
-The model snapshot volume is separate from `arag-stage0_sberquad_vectors_cache_v1`, mounted at `/vector-cache`. Cache path is `<cache-root>/<sha256(identity)>/{documents.npy,queries.npy,manifest.json}`. Identity includes dataset input digest, model id/revision and artifact hashes, dtype/device/precision/execution mode/service version, dimensions, query template, and row counts. Cache validation checks provenance, file digests and array layout; `.npy` is atomically replaced after a durable flush and loaded via `mmap_mode="r"`. With `--require-existing-cache`, a missing or invalid cache fails the benchmark instead of invoking GPU inference. Cache hits record `cache_hit=true` and `embedding_seconds=0`; embedding preparation remains a separate phase. Do not persist raw text in benchmark results.
+Volume модели отделён от `arag-stage0_sberquad_vectors_cache_v1`, который подключается к runners как `/vector-cache`. Путь кэша — `<cache-root>/<sha256(identity)>/{documents.npy,queries.npy,manifest.json}`. Identity включает digest входных данных датасета, model id/revision и hashes файлов модели, dtype/device/precision/execution mode/service version, размерность, query template и число строк. Проверяются provenance, хэши и формат массивов; `.npy` заменяются атомарно после durable flush и читаются через `mmap_mode="r"`. С `--require-existing-cache` отсутствующий или невалидный кэш завершает benchmark ошибкой, не вызывая GPU inference. Cache hit фиксируется как `cache_hit=true`, `embedding_seconds=0`; подготовка embeddings учитывается отдельной фазой. Не сохранять сырой текст в результатах.
 
-## Applied optimizations and benchmark evidence
+## Оптимизации и результаты
 
-- Python 3.14.10, PyTorch 2.14.0+cu130, pinned CUDA 13.0 base, Sentence Transformers 6.2.0, locked by `deploy/locks/giga-gpu/uv.lock`.
-- FP16 CUDA weights with normalized FP32 output; TF32 disabled; `torch.compile(mode="default", dynamic=True)`.
-- Adaptive GPU microbatch bounded by the attention-cell budget (64 × 3,000²), maximum 64 rows; inactive CUDA allocator blocks are released when reserved memory exceeds 25 GiB. One service instance serializes inference with a lock.
-- Limits: embedder 4 CPU / 10 GiB RAM; LiteLLM 1 CPU / 2 GiB; MIRACL precompute runner 1 CPU / 2 GiB. Root filesystems are read-only, caches use bounded temporary storage, service networks are internal, capabilities are dropped.
-- Batch-size sweep `quality-runs/giga-batch-size/1101r2`: batch 64 reached 1,479.65 texts/s over three repeats on short synthetic texts; this is not MIRACL throughput.
-- MIRACL sample optimization `quality-runs/giga-optimization/1101r6`: batch 64 plus length bucketing reached 706.1 vs 293.6 texts/s, with 99.45% top-10 overlap. Bucketing was tested in a separate precompute runner; it is not currently part of the HTTP service. Recheck ordering, retrieval quality, and concurrent load before integrating it.
-- Snapshot SHA-256 reported by `/healthz`: `60463aff43bceea15fd4f44d84fbe9e89e37b9abc97d3dbc461648d0835414e8`.
+- Python 3.14.10, PyTorch 2.14.0+cu130, закреплённая CUDA 13.0 base image, Sentence Transformers 6.2.0 и `deploy/locks/giga-gpu/uv.lock`.
+- FP16 веса на CUDA и нормализованный FP32 output; TF32 выключен; динамический `torch.compile(mode="default", dynamic=True)`.
+- GPU microbatch адаптивно ограничен бюджетом attention cells (64 × 3 000²), максимум 64 строки. При reserved CUDA memory >25 GiB чистятся неактивные allocator blocks. Один instance сериализует inference lock-ом.
+- Лимиты: embedder 4 CPU / 10 GiB RAM; LiteLLM 1 CPU / 2 GiB; MIRACL precompute runner 1 CPU / 2 GiB. Root FS read-only, временные кэши ограничены, сеть сервиса внутренняя, capabilities сброшены.
+- Batch sweep `quality-runs/giga-batch-size/1101r2`: batch 64 дал 1 479,65 текстов/с в трёх повторах на коротких синтетических текстах; это не MIRACL throughput.
+- MIRACL sample `quality-runs/giga-optimization/1101r6`: batch 64 с length bucketing — 706,1 против 293,6 текстов/с, top-10 overlap 99,45%. Bucketing замерялся в отдельном precompute runner и пока не включён в HTTP-сервис. Перед интеграцией повторить проверку порядка, retrieval quality и параллельной нагрузки.
+- Snapshot SHA-256 из `/healthz`: `60463aff43bceea15fd4f44d84fbe9e89e37b9abc97d3dbc461648d0835414e8`.
 
-Linux runs must have their own host profile and remain separate from WSL2 cohorts without paired runs. Resource admission includes the shared GPU service, gateway, runners, and databases under the 16 vCPU / 32 GiB benchmark ceiling. Security checks stay a quality gate; keep open findings visible and treat this setup as benchmark-only.
+Linux-прогоны получают отдельный host profile и не смешиваются с WSL2 без парных запусков. Resource admission учитывает общий GPU-сервис, gateway, runners и базы в пределах 16 vCPU / 32 GiB. Security checks остаются quality gate; открытые findings должны оставаться видимыми, профиль benchmark-only.
